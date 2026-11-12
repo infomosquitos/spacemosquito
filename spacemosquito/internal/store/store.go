@@ -45,6 +45,28 @@ type Store interface {
 	IndexPageContent(ctx context.Context, spaceKey string, confluenceID int) error
 	IndexAllPageContents(ctx context.Context) error
 	GetPageStats(ctx context.Context) (*PageStats, error)
+	// SearchResultsByPageIDs returns search result rows (no excerpt or
+	// score) for pages found by semantic search.
+	SearchResultsByPageIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]SearchResult, error)
+
+	// Semantic index (ADR-019).
+	// ListEmbedSources returns every saved page's title and content, or
+	// one space's when spaceKey is set.
+	ListEmbedSources(ctx context.Context, spaceKey string) ([]EmbedSource, error)
+	// GetEmbedSource returns one page's title and content.
+	GetEmbedSource(ctx context.Context, spaceKey string, confluenceID int) (*EmbedSource, error)
+	// EmbeddedSourceHashes returns, per page embedded with model, the hash
+	// of the title and content its chunks were built from.
+	EmbeddedSourceHashes(ctx context.Context, model string) (map[uuid.UUID]string, error)
+	// PageChunkVectors returns a page's stored vectors by chunk content hash.
+	PageChunkVectors(ctx context.Context, pageID uuid.UUID) (map[string][]byte, error)
+	// SavePageChunks replaces a page's chunks in one transaction.
+	SavePageChunks(ctx context.Context, pageID uuid.UUID, model, sourceHash string, chunks []PageChunk) error
+	// ForEachChunkVector streams every vector of model.
+	ForEachChunkVector(ctx context.Context, model string, fn func(ChunkVector) error) error
+	// ChunkText returns one chunk's Markdown and heading path.
+	ChunkText(ctx context.Context, pageID uuid.UUID, chunkIndex int) (text, headingPath string, err error)
+	GetEmbeddingStats(ctx context.Context, model string) (*EmbeddingStats, error)
 
 	Close()
 }

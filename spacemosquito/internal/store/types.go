@@ -97,3 +97,36 @@ type PageStats struct {
 	LastCrawledStr string    `db:"-"`
 	ContentLang    string    `db:"content_lang"`
 }
+
+// EmbedSource is a page's text for semantic indexing.
+type EmbedSource struct {
+	PageID       uuid.UUID
+	SpaceKey     string
+	ConfluenceID int
+	Title        string
+	Content      string
+}
+
+// PageChunk is an embedded piece of a page (ADR-019).
+type PageChunk struct {
+	Index       int
+	HeadingPath string
+	Text        string
+	ContentHash string
+	Vector      []byte // little-endian float32
+}
+
+// ChunkVector is one stored vector with what search needs to place it.
+type ChunkVector struct {
+	PageID      uuid.UUID
+	ChunkIndex  int
+	HeadingPath string
+	Vector      []byte
+}
+
+// EmbeddingStats reports semantic index coverage for a model.
+type EmbeddingStats struct {
+	Pages         int // all saved pages
+	EmbeddedPages int // pages embedded with the model
+	Chunks        int
+}
