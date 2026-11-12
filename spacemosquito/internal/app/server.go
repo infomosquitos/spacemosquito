@@ -19,6 +19,7 @@ import (
 	"github.com/vkh/spacemosquito/internal/mcp"
 	"github.com/vkh/spacemosquito/internal/paths"
 	"github.com/vkh/spacemosquito/internal/scraper"
+	"github.com/vkh/spacemosquito/internal/search"
 	"github.com/vkh/spacemosquito/internal/session"
 	"github.com/vkh/spacemosquito/internal/storage"
 	"github.com/vkh/spacemosquito/internal/store"
@@ -116,12 +117,20 @@ func setupComponents(cfg *config.Config, log *zap.Logger) (*serverComponents, er
 	if err != nil {
 		log.Warn("semantic search unavailable; keyword search only", zap.Error(err))
 	}
+	var queryEmbedder embed.Embedder // stays a nil interface when semantic search is off
 	if semantic != nil {
 		crawlJobManager.PageSaved = semantic.Background.Notify
+		queryEmbedder = semantic.Embedder
 	}
+	searchService := search.NewService(database, queryEmbedder, logging.New("search", log))
+	if semantic != nil {
+		semantic.Indexer.OnChange = searchService.Invalidate
+	}
+	searchHandler.Service = searchService
 	crawlHandler := api.NewCrawlHandler(crawlJobManager, cfg, logging.New("crawl_api", log))
 
 	mcpServer := mcp.New(database, sessionStore, cfg, logging.New("mcp", log))
+	mcpServer.Search = searchService
 	mcp.ServerInstance = mcpServer
 
 	cronConfigPath, err := paths.ResolveCronConfig()

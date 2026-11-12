@@ -16,6 +16,8 @@ type SearchHandler struct {
 	store *session.Store
 	cfg   *config.Config
 	log   logging.Sugar
+	// Search runs keyword/semantic/hybrid search; nil = keyword only.
+	Service *search.Service
 }
 
 func NewSearchHandler(database store.Store, store *session.Store, cfg *config.Config, log logging.Sugar) *SearchHandler {
@@ -48,7 +50,20 @@ func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	results, err := h.db.SearchPages(r.Context(), query, spaceKey, limit)
+	mode, err := search.ParseMode(r.URL.Query().Get("mode"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	var results []store.SearchResult
+	modeUsed := search.ModeKeyword
+	if h.Service != nil {
+		var res search.Response
+		res, err = h.Service.Search(r.Context(), search.Request{Query: query, SpaceKey: spaceKey, Limit: limit, Mode: mode})
+		results, modeUsed = res.Results, res.Mode
+	} else {
+		results, err = h.db.SearchPages(r.Context(), query, spaceKey, limit)
+	}
 	if err != nil {
 		h.log.Errorw("search failed", "query", query, "error", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "search failed: " + err.Error()})
@@ -72,6 +87,7 @@ func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"query":   query,
+		"mode":    modeUsed,
 		"count":   len(hits),
 		"results": hits,
 	})

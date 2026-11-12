@@ -53,7 +53,7 @@ func TestPageChunks(t *testing.T) {
 	if err := db.ForEachChunkVector(ctx, "m1", func(cv store.ChunkVector) error {
 		seen = append(seen, cv)
 		return nil
-	}); err != nil || len(seen) != 2 || seen[1].HeadingPath != "A > B" {
+	}); err != nil || len(seen) != 2 || seen[1].HeadingPath != "A > B" || seen[0].SpaceKey != "TST" {
 		t.Fatalf("streamed = %+v, %v", seen, err)
 	}
 	if text, path, err := db.ChunkText(ctx, src.PageID, 1); err != nil || text != "two" || path != "A > B" {

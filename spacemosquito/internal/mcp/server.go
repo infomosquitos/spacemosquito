@@ -26,6 +26,8 @@ type Server struct {
 	store *session.Store
 	cfg   *config.Config
 	log   logging.Sugar
+	// Search runs keyword/semantic/hybrid search; nil = keyword only.
+	Search *search.Service
 }
 
 type MCPRequest struct {
@@ -156,13 +158,14 @@ func toolDefinitions() []Tool {
 	return []Tool{
 		{
 			Name:        "confluence_search",
-			Description: "Search Confluence pages using BM25/FTS lexical search. Results include confluence_id for use with confluence_get_page, and history.updated_by/updated_at (last Confluence update) when known.",
+			Description: "Search Confluence pages. Default mode is hybrid when semantic search is available: keyword (BM25, exact terms, IDs, titles) merged with meaning-based matches, so natural-language questions work. Results include confluence_id for use with confluence_get_page, match (keyword, semantic or both), heading_path of the matching section when the excerpt comes from it, and history.updated_by/updated_at (last Confluence update) when known.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {
-					"query": {"type": "string", "description": "Search query"},
+					"query": {"type": "string", "description": "Search query: keywords, an ID like CCP-761, or a question in natural language"},
 					"space": {"type": "string", "description": "Optional space key to filter"},
-					"limit": {"type": "integer", "description": "Max results (default 10)"}
+					"limit": {"type": "integer", "description": "Max results (default 10)"},
+					"mode": {"type": "string", "enum": ["hybrid", "keyword", "semantic"], "description": "hybrid (default when available), keyword (exact terms, all required) or semantic (meaning only)"}
 				},
 				"required": ["query"]
 			}`),
@@ -274,7 +277,19 @@ func (s *Server) toolSearch(args map[string]interface{}) (interface{}, error) {
 		limit = int(l)
 	}
 
-	results, err := s.db.SearchPages(context.Background(), query, space, limit)
+	modeArg, _ := args["mode"].(string)
+	mode, err := search.ParseMode(modeArg)
+	if err != nil {
+		return nil, err
+	}
+	var results []store.SearchResult
+	if s.Search != nil {
+		var res search.Response
+		res, err = s.Search.Search(context.Background(), search.Request{Query: query, SpaceKey: space, Limit: limit, Mode: mode})
+		results = res.Results
+	} else {
+		results, err = s.db.SearchPages(context.Background(), query, space, limit)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("search failed: %w", err)
 	}

@@ -88,6 +88,11 @@ type SearchResult struct {
 	// UpdatedBy/UpdatedAt: last Confluence update (PageHistory), if known.
 	UpdatedBy string
 	UpdatedAt *time.Time
+	// Match is how the page was found in semantic/hybrid search: "keyword",
+	// "semantic" or "both"; empty for keyword-only search.
+	Match string
+	// HeadingPath is the section of the excerpt when it is a matched chunk.
+	HeadingPath string
 }
 
 type PageStats struct {
@@ -119,6 +124,7 @@ type PageChunk struct {
 // ChunkVector is one stored vector with what search needs to place it.
 type ChunkVector struct {
 	PageID      uuid.UUID
+	SpaceKey    string
 	ChunkIndex  int
 	HeadingPath string
 	Vector      []byte

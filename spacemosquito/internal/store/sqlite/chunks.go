@@ -134,8 +134,11 @@ func (d *DB) SavePageChunks(ctx context.Context, pageID uuid.UUID, model, source
 
 func (d *DB) ForEachChunkVector(ctx context.Context, model string, fn func(store.ChunkVector) error) error {
 	rows, err := d.sql.QueryContext(ctx,
-		`SELECT c.page_id, c.chunk_index, c.heading_path, c.vector
-		 FROM page_chunks c JOIN page_embeddings e ON e.page_id = c.page_id
+		`SELECT c.page_id, s.key, c.chunk_index, c.heading_path, c.vector
+		 FROM page_chunks c
+		 JOIN page_embeddings e ON e.page_id = c.page_id
+		 JOIN pages p ON p.id = c.page_id
+		 JOIN spaces s ON s.id = p.space_id
 		 WHERE e.model = ?
 		 ORDER BY c.page_id, c.chunk_index`, model)
 	if err != nil {
@@ -145,7 +148,7 @@ func (d *DB) ForEachChunkVector(ctx context.Context, model string, fn func(store
 	for rows.Next() {
 		var cv store.ChunkVector
 		var id string
-		if err := rows.Scan(&id, &cv.ChunkIndex, &cv.HeadingPath, &cv.Vector); err != nil {
+		if err := rows.Scan(&id, &cv.SpaceKey, &cv.ChunkIndex, &cv.HeadingPath, &cv.Vector); err != nil {
 			return err
 		}
 		if cv.PageID, err = uuid.Parse(id); err != nil {

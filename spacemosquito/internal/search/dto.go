@@ -16,6 +16,12 @@ type SearchHit struct {
 	Similarity   float64 `json:"similarity"`
 	FilePath     string  `json:"file_path,omitempty"`
 	InternalID   string  `json:"internal_id,omitempty"`
+	// Match tells how semantic/hybrid search found the page: "keyword",
+	// "semantic" or "both".
+	Match string `json:"match,omitempty"`
+	// HeadingPath is the section the excerpt comes from, when the excerpt
+	// is the page's best-matching chunk.
+	HeadingPath string `json:"heading_path,omitempty"`
 	// BrowseURL is the page's path in the served catalog (REST only).
 	BrowseURL string `json:"browse_url,omitempty"`
 	// History holds the last Confluence update (updated_by, updated_at) when
@@ -53,6 +59,8 @@ func ToSearchHits(results []store.SearchResult, exposeInternalIDs bool) []Search
 			Excerpt:      NormalizeExcerpt(r.Excerpt, DefaultExcerptMaxRunes),
 			Similarity:   r.Similarity,
 			FilePath:     r.FilePath,
+			Match:        r.Match,
+			HeadingPath:  r.HeadingPath,
 		}
 		if r.UpdatedBy != "" || r.UpdatedAt != nil {
 			hits[i].History = &store.PageHistory{UpdatedBy: r.UpdatedBy, UpdatedAt: r.UpdatedAt}

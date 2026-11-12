@@ -21,6 +21,7 @@ import (
 	"github.com/vkh/spacemosquito/internal/contentmd"
 	"github.com/vkh/spacemosquito/internal/cron"
 	"github.com/vkh/spacemosquito/internal/datastore"
+	"github.com/vkh/spacemosquito/internal/embed"
 	"github.com/vkh/spacemosquito/internal/paths"
 	"github.com/vkh/spacemosquito/internal/scraper"
 	"github.com/vkh/spacemosquito/internal/search"
@@ -151,13 +152,18 @@ func Run(args []string) int {
 			}
 		}
 	case "search":
-		query, spaceKey, limit, err := parseSearchArgs(args[2:])
+		modeArg, rest := extractFlag(args[2:], "--mode")
+		mode, modeErr := search.ParseMode(modeArg)
+		query, spaceKey, limit, err := parseSearchArgs(rest)
+		if err == nil {
+			err = modeErr
+		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-			fmt.Fprintln(os.Stderr, "usage: spacemosquito search <query> [space-key] [--limit N]")
+			fmt.Fprintln(os.Stderr, "usage: spacemosquito search <query> [space-key] [--limit N] [--mode hybrid|keyword|semantic]")
 			return 1
 		}
-		runSearch(cfg, query, spaceKey, limit, log)
+		runSearch(cfg, query, spaceKey, limit, mode, log)
 	case "get-page":
 		if len(args) < 3 {
 			fmt.Fprintln(os.Stderr, "usage: spacemosquito get-page <confluence_id> [space_key]")
@@ -671,7 +677,22 @@ func optionalString(ss []string, idx int) string {
 	return ""
 }
 
-func runSearch(cfg *config.Config, query, spaceKey string, limit int, log *zap.Logger) {
+// extractFlag removes "name value" from args and returns the value.
+func extractFlag(args []string, name string) (string, []string) {
+	var rest []string
+	value := ""
+	for i := 0; i < len(args); i++ {
+		if args[i] == name && i+1 < len(args) {
+			value = args[i+1]
+			i++
+			continue
+		}
+		rest = append(rest, args[i])
+	}
+	return value, rest
+}
+
+func runSearch(cfg *config.Config, query, spaceKey string, limit int, mode search.Mode, log *zap.Logger) {
 	sugar := logging.New("search", log)
 
 	database, err := datastore.Open(cfg, log)
@@ -681,11 +702,27 @@ func runSearch(cfg *config.Config, query, spaceKey string, limit int, log *zap.L
 	}
 	defer database.Close()
 
-	results, err := database.SearchPages(context.Background(), query, spaceKey, limit)
+	// Semantic and hybrid search start the embedding helper (model load
+	// takes a few seconds); without it, search is keyword only.
+	var emb embed.Embedder
+	if mode != search.ModeKeyword {
+		dataDir, _ := paths.ResolveDataDir()
+		sem, err := embed.Open(cfg.Embedder, dataDir, database, logging.New("embed", log))
+		if err != nil {
+			sugar.Warnw("semantic search unavailable", "error", err)
+		}
+		if sem != nil {
+			defer sem.Close()
+			emb = sem.Embedder
+		}
+	}
+	res, err := search.NewService(database, emb, sugar).Search(context.Background(),
+		search.Request{Query: query, SpaceKey: spaceKey, Limit: limit, Mode: mode})
 	if err != nil {
 		sugar.Errorw("search failed", "query", query, "error", err)
 		os.Exit(1)
 	}
+	results := res.Results
 
 	if results == nil {
 		fmt.Println("No results found")
@@ -698,11 +735,18 @@ func runSearch(cfg *config.Config, query, spaceKey string, limit int, log *zap.L
 	if spaceKey != "" {
 		fmt.Printf("Space: %s\n", spaceKey)
 	}
-	fmt.Printf("Total: %d results\n\n", len(hits))
+	fmt.Printf("Total: %d results (%s search)\n\n", len(hits), res.Mode)
 
 	for i, r := range hits {
 		fmt.Printf("%d. %s (Space: %s, ID: %d)\n", i+1, r.Title, r.SpaceKey, r.ConfluenceID)
-		fmt.Printf("   Similarity: %.4f\n", r.Similarity)
+		if r.Match != "" {
+			fmt.Printf("   Score: %.4f, match: %s\n", r.Similarity, r.Match)
+		} else {
+			fmt.Printf("   Similarity: %.4f\n", r.Similarity)
+		}
+		if r.HeadingPath != "" {
+			fmt.Printf("   Section: %s\n", r.HeadingPath)
+		}
 		if r.Excerpt != "" {
 			fmt.Printf("   Excerpt: %s\n", r.Excerpt)
 		}
