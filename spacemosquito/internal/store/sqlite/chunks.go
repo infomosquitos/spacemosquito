@@ -84,8 +84,10 @@ func (d *DB) EmbeddedSourceHashes(ctx context.Context, model string) (map[uuid.U
 	return out, rows.Err()
 }
 
-func (d *DB) PageChunkVectors(ctx context.Context, pageID uuid.UUID) (map[string][]byte, error) {
-	rows, err := d.sql.QueryContext(ctx, `SELECT content_hash, vector FROM page_chunks WHERE page_id = ?`, pageID.String())
+func (d *DB) PageChunkVectors(ctx context.Context, pageID uuid.UUID, model string) (map[string][]byte, error) {
+	rows, err := d.sql.QueryContext(ctx,
+		`SELECT c.content_hash, c.vector FROM page_chunks c JOIN page_embeddings e ON e.page_id = c.page_id
+		 WHERE c.page_id = ? AND e.model = ?`, pageID.String(), model)
 	if err != nil {
 		return nil, fmt.Errorf("list page chunks: %w", err)
 	}

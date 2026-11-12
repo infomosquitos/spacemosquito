@@ -58,8 +58,9 @@ type Store interface {
 	// EmbeddedSourceHashes returns, per page embedded with model, the hash
 	// of the title and content its chunks were built from.
 	EmbeddedSourceHashes(ctx context.Context, model string) (map[uuid.UUID]string, error)
-	// PageChunkVectors returns a page's stored vectors by chunk content hash.
-	PageChunkVectors(ctx context.Context, pageID uuid.UUID) (map[string][]byte, error)
+	// PageChunkVectors returns a page's stored vectors of model by chunk
+	// content hash.
+	PageChunkVectors(ctx context.Context, pageID uuid.UUID, model string) (map[string][]byte, error)
 	// SavePageChunks replaces a page's chunks in one transaction.
 	SavePageChunks(ctx context.Context, pageID uuid.UUID, model, sourceHash string, chunks []PageChunk) error
 	// ForEachChunkVector streams every vector of model.

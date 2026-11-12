@@ -42,9 +42,12 @@ func TestPageChunks(t *testing.T) {
 	if other, _ := db.EmbeddedSourceHashes(ctx, "m2"); len(other) != 0 {
 		t.Fatalf("other model sees %v", other)
 	}
-	vecs, err := db.PageChunkVectors(ctx, src.PageID)
+	vecs, err := db.PageChunkVectors(ctx, src.PageID, "m1")
 	if err != nil || len(vecs) != 2 || vecs["h1"][0] != 2 {
 		t.Fatalf("vectors = %v, %v", vecs, err)
+	}
+	if other, _ := db.PageChunkVectors(ctx, src.PageID, "m2"); len(other) != 0 {
+		t.Fatalf("vectors of another model reused: %v", other)
 	}
 	var seen []store.ChunkVector
 	if err := db.ForEachChunkVector(ctx, "m1", func(cv store.ChunkVector) error {
