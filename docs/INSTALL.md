@@ -32,14 +32,15 @@ archive below.
    and verify the checksum.
 2. Unpack it into a folder you keep. It holds `spacemosquito`,
    `spacemosquito-embedder` and `lib/` (llama.cpp); keep them together.
-3. For semantic search, download the model (635 MB, MIT license) into a
-   `models` folder next to the binary (or `~/.spacemosquito/models`):
+3. For semantic search, download the model (635 MB, MIT license) from the
+   [`model-bge-m3-q8_0-v1`](https://github.com/infomosquitos/spacemosquito/releases/tag/model-bge-m3-q8_0-v1)
+   release into a `models` folder next to the binary (or `~/.spacemosquito/models`):
 
    ```sh
    mkdir -p ~/opt/spacemosquito && tar xzf spacemosquito-linux-amd64.tar.gz -C ~/opt/spacemosquito
    mkdir -p ~/opt/spacemosquito/models
    curl -L -o ~/opt/spacemosquito/models/bge-m3-q8_0.gguf \
-     https://huggingface.co/ggml-org/bge-m3-Q8_0-GGUF/resolve/9eba04c5d75ba5a1595e45de734d36bef4e5cb98/bge-m3-q8_0.gguf
+     https://github.com/infomosquitos/spacemosquito/releases/download/model-bge-m3-q8_0-v1/bge-m3-q8_0.gguf
    ln -s ~/opt/spacemosquito/spacemosquito ~/.local/bin/spacemosquito
    ```
 

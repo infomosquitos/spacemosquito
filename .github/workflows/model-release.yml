@@ -1,0 +1,42 @@
+name: Model release
+
+# Publishes the semantic search model (ADR-019) as an asset of this repo's
+# release MODEL_TAG (scripts/model-pins.sh), so the Homebrew model cask and
+# manual installs fetch it from GitHub. Run it once per model change, before
+# the app release that uses it.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download and verify the model
+        id: pins
+        run: |
+          . scripts/model-pins.sh
+          mkdir -p dist
+          curl -fsSL -o "dist/$FILE" "$SOURCE_URL"
+          echo "$SHA256  dist/$FILE" | sha256sum -c -
+          { echo "tag=$MODEL_TAG"; echo "file=$FILE"; } >> "$GITHUB_OUTPUT"
+
+      # Not the repo's "latest" release: the update check and the app cask's
+      # livecheck read releases/latest.
+      - name: Publish release asset
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.pins.outputs.tag }}
+          name: Semantic search model (${{ steps.pins.outputs.tag }})
+          make_latest: "false"
+          body: |
+            bge-m3 embedding model (GGUF Q8_0) for SpaceMosquito semantic search (ADR-019).
+            Source: llama.cpp project's conversion of BAAI/bge-m3 (MIT license).
+            Installed by the Homebrew cask `spacemosquito-bge-m3-embeddings-model`; see docs/INSTALL.md for manual installs.
+          files: dist/${{ steps.pins.outputs.file }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

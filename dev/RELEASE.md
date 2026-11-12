@@ -49,9 +49,15 @@ the yzma version in `go.mod` pins (`pkg/download.DefaultVersion`). Bump yzma,
 then `LLAMA_TAG` and the four sha256 values in
 `spacemosquito/scripts/fetch-llama-libs.sh` together, and run the real-model
 test (`go test -tags=llama ./internal/embed`, see `dev/README.md`) before
-tagging. **Model changes:** edit `scripts/render-model-cask.sh` (revision,
-sha256, file, bump its `VERSION`) and `embed.ModelFile`; every page is
-re-embedded once.
+tagging.
+
+**Model (once per model change, before the app release that needs it):** the
+model is an asset of this repo's release `model-bge-m3-q8_0-v<N>`, published by
+**Actions → Model release** (manual; downloads the pinned source, checks
+sha256, never marked "latest", which the update check and cask livecheck
+read). Pins live in [`scripts/model-pins.sh`](../scripts/model-pins.sh). To
+change the model: edit the pins (bump `MODEL_VERSION`) and `embed.ModelFile`,
+run the workflow, then release the app; every page is re-embedded once.
 
 Alternative: GitHub **Releases → Draft a new release → create tag `vX.Y.Z` → Publish**. That also pushes the tag and triggers the same workflow (assets attach to the release).
 
