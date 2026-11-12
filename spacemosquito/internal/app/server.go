@@ -15,6 +15,7 @@ import (
 	"github.com/vkh/spacemosquito/internal/config"
 	"github.com/vkh/spacemosquito/internal/cron"
 	"github.com/vkh/spacemosquito/internal/datastore"
+	"github.com/vkh/spacemosquito/internal/embed"
 	"github.com/vkh/spacemosquito/internal/mcp"
 	"github.com/vkh/spacemosquito/internal/paths"
 	"github.com/vkh/spacemosquito/internal/scraper"
@@ -73,6 +74,7 @@ type serverComponents struct {
 	mcpServer       *mcp.Server
 	cronManager     *cron.Manager
 	cronScheduler   *cron.Scheduler
+	semantic        *embed.Semantic
 	mux             *http.ServeMux
 	log             *zap.Logger
 }
@@ -107,6 +109,16 @@ func setupComponents(cfg *config.Config, log *zap.Logger) (*serverComponents, er
 	searchHandler := api.NewSearchHandler(database, sessionStore, cfg, logging.New("search", log))
 
 	crawlJobManager := scraper.NewJobManager(cfg, database, sessionStore, storageWriter, assetDownloader, logging.New("crawl", log))
+
+	// Semantic search (ADR-019): off by config, or keyword search only when
+	// the helper, libraries or model are not installed.
+	semantic, err := openSemantic(cfg, database, log)
+	if err != nil {
+		log.Warn("semantic search unavailable; keyword search only", zap.Error(err))
+	}
+	if semantic != nil {
+		crawlJobManager.PageSaved = semantic.Background.Notify
+	}
 	crawlHandler := api.NewCrawlHandler(crawlJobManager, cfg, logging.New("crawl_api", log))
 
 	mcpServer := mcp.New(database, sessionStore, cfg, logging.New("mcp", log))
@@ -174,14 +186,29 @@ func setupComponents(cfg *config.Config, log *zap.Logger) (*serverComponents, er
 		mcpServer:       mcpServer,
 		cronManager:     cronManager,
 		cronScheduler:   cronScheduler,
+		semantic:        semantic,
 		mux:             mux,
 		log:             log,
 	}, nil
 }
 
+func openSemantic(cfg *config.Config, db store.Store, log *zap.Logger) (*embed.Semantic, error) {
+	dataDir, err := paths.ResolveDataDir()
+	if err != nil {
+		dataDir = ""
+	}
+	return embed.Open(cfg.Embedder, dataDir, db, logging.New("embed", log))
+}
+
 func (c *serverComponents) Start(ctx context.Context) error {
 	if err := c.cronScheduler.Start(ctx); err != nil {
 		c.log.Warn("failed to start cron scheduler", zap.Error(err))
+	}
+	bgCtx, stopBackground := context.WithCancel(ctx)
+	defer stopBackground()
+	if c.semantic != nil {
+		c.log.Info("semantic search on", zap.String("model", c.semantic.Paths.Model), zap.String("lib", c.semantic.Paths.Lib))
+		go c.semantic.Background.Run(bgCtx)
 	}
 
 	loggingMux := api.LoggingMiddleware(c.mux, logging.New("http", c.log))
@@ -215,6 +242,8 @@ func (c *serverComponents) Start(ctx context.Context) error {
 
 	c.scraperInstance.CloseBrowser()
 	c.cronScheduler.Stop()
+	stopBackground()
+	c.semantic.Close()
 	c.database.Close()
 
 	c.log.Info("server stopped")

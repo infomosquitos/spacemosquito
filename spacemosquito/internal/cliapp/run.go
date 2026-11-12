@@ -128,13 +128,28 @@ func Run(args []string) int {
 		}
 		runCrawlPage(cfg, args[2], confluenceID, log)
 	case "reindex":
-		withContent := false
-		for _, arg := range args[2:] {
-			if arg == "--content" {
+		withContent, withEmbeddings, spaceKey := false, false, ""
+		rest := args[2:]
+		for i := 0; i < len(rest); i++ {
+			switch rest[i] {
+			case "--content":
 				withContent = true
+			case "--embeddings":
+				withEmbeddings = true
+			case "--space":
+				if i+1 < len(rest) {
+					i++
+					spaceKey = rest[i]
+				}
 			}
 		}
 		runReindex(cfg, withContent, log)
+		if withEmbeddings {
+			if err := runEmbeddings(cfg, spaceKey, log); err != nil {
+				fmt.Fprintf(os.Stderr, "embeddings: %v\n", err)
+				return 1
+			}
+		}
 	case "search":
 		query, spaceKey, limit, err := parseSearchArgs(args[2:])
 		if err != nil {
@@ -882,7 +897,8 @@ func printUsage() {
 	fmt.Println("  crawl-page <space-key> <id>  Refresh one page (always overwrite text + assets)")
 	fmt.Println("  search <q>     Search pages (optional: <space-key> [--limit N])")
 	fmt.Println("  get-page <id>  Get page by Confluence ID (optional: <space-key>)")
-	fmt.Println("  reindex        Rebuild FTS indexes (--content regenerates Markdown too)")
+	fmt.Println("  reindex        Rebuild FTS indexes (--content regenerates Markdown too;")
+	fmt.Println("                 --embeddings [--space KEY] updates the semantic index now)")
 	fmt.Println("  delete-space [--delete-files] <space-key>  Remove a space from the catalog (saved files kept unless --delete-files)")
 	fmt.Println("  export-html [--space KEY] <dir>  Write the catalog as static HTML for browsing without serve")
 	fmt.Println("  stats          Show database statistics")

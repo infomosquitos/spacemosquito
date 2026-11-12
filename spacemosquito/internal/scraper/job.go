@@ -59,6 +59,9 @@ type CrawlJobManager struct {
 	store   *session.Store
 	storage *storage.Writer
 	assets  *storage.AssetDownloader
+	// PageSaved, if set, runs after each page a crawl saves (the semantic
+	// index picks it up). It must not block.
+	PageSaved func()
 }
 
 type CrawlRunner struct {
@@ -441,6 +444,9 @@ func (r *CrawlRunner) Run(ctx context.Context, job *CrawlJob) error {
 		job.UpdatedAt = time.Now()
 		r.manager.mu.Unlock()
 		index.pageSaved()
+		if r.manager.PageSaved != nil {
+			r.manager.PageSaved()
+		}
 
 		if r.log.Enabled() {
 			r.log.Infow("page crawled",
