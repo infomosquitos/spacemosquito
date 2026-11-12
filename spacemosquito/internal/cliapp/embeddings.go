@@ -3,6 +3,7 @@ package cliapp
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"go.uber.org/zap"
@@ -11,6 +12,7 @@ import (
 	"github.com/vkh/spacemosquito/internal/datastore"
 	"github.com/vkh/spacemosquito/internal/embed"
 	"github.com/vkh/spacemosquito/internal/paths"
+	"github.com/vkh/spacemosquito/internal/search"
 	"github.com/vkh/spacemosquito/pkg/logging"
 )
 
@@ -60,5 +62,40 @@ func runEmbeddings(cfg *config.Config, spaceKey string, log *zap.Logger) error {
 	}
 	fmt.Printf("Semantic index: %d pages embedded (%d chunks), %d failed, %d up to date, in %s\n",
 		res.Indexed, res.Chunks, res.Failed, res.UpToDate, time.Since(start).Round(time.Second))
+	return nil
+}
+
+// runEvalSearch scores keyword, semantic and hybrid search on a YAML list
+// of questions with the Confluence IDs that answer them (ADR-019):
+//
+//   - question: how do we import prices from SAP?
+//     expect: [276857181]
+//     space: SCCPI   # optional
+func runEvalSearch(cfg *config.Config, file string, k int, log *zap.Logger) error {
+	cases, err := search.LoadEvalCases(file)
+	if err != nil {
+		return err
+	}
+	database, err := datastore.Open(cfg, log)
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+	dataDir, _ := paths.ResolveDataDir()
+	sem, err := embed.Open(cfg.Embedder, dataDir, database, logging.New("embed", log))
+	if err != nil {
+		return err
+	}
+	if sem == nil {
+		return fmt.Errorf("semantic search is off (embedder.provider: none)")
+	}
+	defer sem.Close()
+	svc := search.NewService(database, sem.Embedder, logging.New("search", log))
+	scores, err := svc.Evaluate(context.Background(), cases,
+		[]search.Mode{search.ModeKeyword, search.ModeSemantic, search.ModeHybrid}, k)
+	if err != nil {
+		return err
+	}
+	search.PrintEval(os.Stdout, scores, k, len(cases))
 	return nil
 }

@@ -197,3 +197,23 @@ func TestParseMode(t *testing.T) {
 		t.Error("fuzzy accepted")
 	}
 }
+
+func TestEvaluate(t *testing.T) {
+	svc, _, ctx := setupService(t)
+	cases := []EvalCase{
+		{Question: "how do we handle price updates from SAP", Expect: []int{1}},
+		{Question: "CCP-761", Expect: []int{2}},
+		{Question: "where do we go hiking", Expect: []int{3}},
+	}
+	scores, err := svc.Evaluate(ctx, cases, []Mode{ModeKeyword, ModeHybrid}, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kw, hy := scores[0], scores[1]
+	if kw.Recall >= hy.Recall || hy.Recall != 1 || hy.MRR != 1 {
+		t.Fatalf("keyword %+v, hybrid %+v", kw, hy)
+	}
+	if len(kw.Missed) != 2 {
+		t.Fatalf("keyword missed %v", kw.Missed)
+	}
+}

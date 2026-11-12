@@ -164,6 +164,21 @@ func Run(args []string) int {
 			return 1
 		}
 		runSearch(cfg, query, spaceKey, limit, mode, log)
+	case "eval-search":
+		if len(args) < 3 {
+			fmt.Fprintln(os.Stderr, "usage: spacemosquito eval-search <questions.yaml> [--k N]")
+			return 1
+		}
+		k := 5
+		if v, _ := extractFlag(args[3:], "--k"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 {
+				k = n
+			}
+		}
+		if err := runEvalSearch(cfg, args[2], k, log); err != nil {
+			fmt.Fprintln(os.Stderr, "eval-search:", err)
+			return 1
+		}
 	case "get-page":
 		if len(args) < 3 {
 			fmt.Fprintln(os.Stderr, "usage: spacemosquito get-page <confluence_id> [space_key]")
@@ -956,6 +971,7 @@ func printUsage() {
 	fmt.Println("  crawl-page <space-key> <id>  Refresh one page (always overwrite text + assets)")
 	fmt.Println("  search <q>     Search pages (optional: <space-key> [--limit N])")
 	fmt.Println("  get-page <id>  Get page by Confluence ID (optional: <space-key>)")
+	fmt.Println("  eval-search    Compare search modes on questions with known answer pages (YAML)")
 	fmt.Println("  reindex        Rebuild FTS indexes (--content regenerates Markdown too;")
 	fmt.Println("                 --embeddings [--space KEY] updates the semantic index now)")
 	fmt.Println("  delete-space [--delete-files] <space-key>  Remove a space from the catalog (saved files kept unless --delete-files)")

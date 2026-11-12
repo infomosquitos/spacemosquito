@@ -8,7 +8,7 @@ Release **v0.8.10** (crawl buttons stay enabled on long crawls, 1.5 s asset paus
 
 ## Active task
 
-**[semantic-search](tasks/semantic-search.md)** — issue [#9](https://github.com/infomosquitos/spacemosquito/issues/9), target v0.9.0. Spike done (go: yzma + llama.cpp b12110 + bge-m3 Q8_0, helper process). Slice 1 done (helper binary, protocol, client, lookup, config). Next: slice 2 (chunker).
+**[semantic-search](tasks/semantic-search.md)** — issue [#9](https://github.com/infomosquitos/spacemosquito/issues/9), target v0.9.0. Slices 1–7 done and committed (helper, chunker, storage, indexer, hybrid search in MCP/REST/CLI, release archives + model cask, docs); `eval-search` tool ready. Next: evaluation on ~30 real questions (user), then ADR-019 → Accepted, pre-release tag to test CI packaging, v0.9.0.
 
 ## Blockers
 

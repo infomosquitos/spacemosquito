@@ -157,6 +157,10 @@ CREATE INDEX page_chunks_model ON page_chunks(model);
 7. **Docs:** ADR-019, README, INSTALL, `dev/README.md` search section, CHANGELOG, `config.yaml.example`.
 8. **Evaluation:** `eval-search` dev command; run it on the user's question set and record the result in ADR-019.
 
+## Progress
+
+Slices 1–7 done (2026-11-12). Full backfill of the 956-page catalog (copy): 5,223 chunks in 9 min 23 s on Metal, 0 failures; a rerun with nothing changed takes 0.45 s. Hybrid search finds paraphrased and German questions that keyword search misses (e.g. "how is the cart recalculated when prices are outdated": keyword 0 results, hybrid → the order simulation pages). `eval-search` is ready; a 3-question smoke run showed hybrid MRR 0.75 vs semantic 1.00 (keyword noise demoting a good semantic hit), which is a candidate for RRF tuning once the real set exists.
+
 ## Done when
 
 - [ ] Fresh Homebrew install (both casks) → `serve` backfills → hybrid search finds paraphrased questions that keyword search misses.
