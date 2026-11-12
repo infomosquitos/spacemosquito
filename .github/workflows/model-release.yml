@@ -25,13 +25,15 @@ jobs:
           echo "$SHA256  dist/$FILE" | sha256sum -c -
           { echo "tag=$MODEL_TAG"; echo "file=$FILE"; } >> "$GITHUB_OUTPUT"
 
-      # Not the repo's "latest" release: the update check and the app cask's
-      # livecheck read releases/latest.
+      # A pre-release, so it can never become the repo's "latest" release
+      # (the update check and the app cask's livecheck read releases/latest);
+      # its download URL works all the same.
       - name: Publish release asset
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.pins.outputs.tag }}
           name: Semantic search model (${{ steps.pins.outputs.tag }})
+          prerelease: true
           make_latest: "false"
           body: |
             bge-m3 embedding model (GGUF Q8_0) for SpaceMosquito semantic search (ADR-019).

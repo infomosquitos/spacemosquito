@@ -175,9 +175,13 @@ jobs:
         run: |
           sha256sum spacemosquito-* > SHA256SUMS || shasum -a 256 spacemosquito-* > SHA256SUMS
 
+      # Tags with "-" (v1.2.3-rc1) are pre-releases and never "latest": the
+      # update check and the cask's livecheck read releases/latest.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ contains(github.ref_name, '-') && 'false' || 'true' }}
           files: |
             dist/spacemosquito-*
             dist/SHA256SUMS
