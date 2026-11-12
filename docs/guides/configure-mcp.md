@@ -104,7 +104,7 @@ API key is required for the default local bind. Do **not** use `--transport sse`
 
 | Tool                     | Purpose                                                                                                                       |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `confluence_search`      | BM25/FTS search. Args: `query` (required), optional `space`, `limit` (default 10). Multi-word queries are **AND**.            |
+| `confluence_search`      | Hybrid search (keyword + meaning, [ADR-019](../adr/019-semantic-search-embeddings.md)): questions in natural language work. Args: `query` (required), optional `space`, `limit` (default 10), `mode` (`hybrid` default, `keyword` = BM25 with all terms required, `semantic`). Hits carry `match` and, for semantic matches, `heading_path`. |
 | `confluence_list_spaces` | List crawled spaces.                                                                                                          |
 | `confluence_list_space`  | Page summaries in a space (cursor pagination). Args: `space_key`, optional `limit`, `after_confluence_id`, `include_content`. |
 | `confluence_get_page`    | Full page by `confluence_id`; optional `space_key` if IDs collide across spaces.                                              |

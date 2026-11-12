@@ -199,6 +199,14 @@ func NormalizeConfig(cfg *config.Config) error {
 	}
 	cfg.Database.Path = dbPath
 
+	for _, p := range []*string{&cfg.Embedder.ModelPath, &cfg.Embedder.LibPath, &cfg.Embedder.HelperPath} {
+		if strings.TrimSpace(*p) != "" {
+			if *p, err = absPath(*p); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 

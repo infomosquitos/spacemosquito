@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/vkh/spacemosquito/internal/config"
 )
 
 func TestResolveDataDir_default(t *testing.T) {
@@ -92,5 +94,22 @@ func TestResolveMigrations_devTree(t *testing.T) {
 	}
 	if filepath.Base(path) != "migrations" {
 		t.Fatalf("ResolveMigrations() = %q", path)
+	}
+}
+
+func TestNormalizeConfig_embedderPaths(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(EnvDataDir, dir)
+	SetDataDir("")
+	cfg := &config.Config{Embedder: config.EmbedderConfig{ModelPath: "~/models/m.gguf", LibPath: ""}}
+	if err := NormalizeConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	home, _ := os.UserHomeDir()
+	if want := filepath.Join(home, "models", "m.gguf"); cfg.Embedder.ModelPath != want {
+		t.Errorf("model_path = %q, want %q", cfg.Embedder.ModelPath, want)
+	}
+	if cfg.Embedder.LibPath != "" {
+		t.Errorf("empty lib_path became %q", cfg.Embedder.LibPath)
 	}
 }

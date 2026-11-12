@@ -73,10 +73,24 @@ Not run in CI by default.
 
 ## Search
 
+`search.Service` (`internal/search/service.go`) serves MCP, REST and the CLI with `mode` = `keyword` | `semantic` | `hybrid` (default `hybrid`; falls back to `keyword` when semantic search is off, not installed, not indexed yet, or the helper fails).
+
+Keyword (`store.SearchPages`, FTS5/BM25):
+
 - Multi-word queries use **AND** — all terms must appear in title or body.
 - **Title is weighted 10×** over body in BM25 ranking.
 - Default result limit is **10** (CLI: `--limit N`; REST: `?limit=N`; MCP: `limit` field).
 - If FTS returns no rows, search falls back to case-insensitive **title substring** match.
+
+Semantic (ADR-019, `internal/embed`):
+
+- `ChunkPage` splits `pages.content` by headings (~1,200 bytes ≈ 360 tokens; tables and code blocks kept whole, oversized tables split by rows with the header repeated) and embeds `title + heading path + chunk`.
+- `spacemosquito-embedder` (`cmd/spacemosquito-embedder`, the only package importing yzma/llama.cpp — enforced by `TestMainBinaryDoesNotLinkLlama`) loads `lib/` + the GGUF model and answers length-prefixed JSON frames on stdin/stdout. `embed.Process` starts it lazily, restarts it after crashes (backoff), stops it after 10 idle minutes; it exits on stdin EOF, so it never outlives `serve`.
+- `Locate` finds helper, libs and model: `embedder.*_path` config → next to the (symlink-resolved) executable (`lib/`, `models/`) → `<prefix>/share/spacemosquito/models` (Homebrew model cask) → `~/.spacemosquito/{lib,models}`.
+- Storage: `page_chunks` (text, heading path, content hash, float32 vector) and `page_embeddings` (model + sha256 of title and content per page), both cascading with pages (migration 014).
+- `Indexer.Backfill` embeds pages whose source hash or model differs, re-embedding only chunks whose hash changed. `serve` runs it in `embed.Background`: at start, 3 s after crawl page saves (`CrawlJobManager.PageSaved`), and every minute (catches cron and `reindex --content`); `reindex --embeddings` runs it in the foreground.
+- Query: embed the query, brute-force dot product over all chunk vectors in memory (reloaded after index changes), best chunk per page; hybrid merges BM25 top 50 and vector top 50 with RRF (k = 60). Semantic-only hits get their best chunk as excerpt plus `heading_path`; every hit reports `match`.
+- Real-model test: `SPACEMOSQUITO_LLAMA_LIB=… SPACEMOSQUITO_LLAMA_MODEL=… go test -tags=llama ./internal/embed -run Llama`. Libraries for a platform: `scripts/fetch-llama-libs.sh <goos> <goarch> <dir>`.
 
 ## Page content (Markdown)
 

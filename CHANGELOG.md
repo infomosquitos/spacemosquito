@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Semantic search**: search understands questions, not only keywords, in any language ("how is the cart recalculated when prices are outdated" finds the order simulation pages). Search is now hybrid by default — exact terms, IDs and titles still rank first, pages that match by meaning fill in — in MCP `confluence_search`, REST `/api/search`, the browse search bars and `spacemosquito search`. Choose with `mode` (`hybrid`, `keyword`, `semantic`); results say how each page matched and, for meaning matches, the section.
+- Pages are embedded locally with the multilingual bge-m3 model through llama.cpp (Metal on Apple Silicon): `serve` indexes in the background (about 10 minutes per 1,000 pages the first time, then only changed pages). Nothing leaves your machine. `spacemosquito stats` shows coverage; `reindex --embeddings` indexes in the foreground; `embedder.provider: none` turns it off.
+
+### Changed
+- Releases are archives (`spacemosquito-<os>-<arch>.tar.gz`, `.zip` on Windows) holding the CLI, its embedding helper and the llama.cpp libraries. Homebrew also installs the model (`spacemosquito-bge-m3-embeddings-model`, 635 MB) once; app upgrades do not download it again. See docs/INSTALL.md for other platforms.
+- The unused `embedder` config placeholders (`model`, `openai`, `bge`) are replaced by `provider`, `model_path`, `lib_path`, `helper_path`, `gpu_layers` and `threads`; old keys are ignored.
+
 ## [0.8.10] - 2026-10-23
 
 ### Changed

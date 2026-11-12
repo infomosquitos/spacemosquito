@@ -32,8 +32,16 @@ session:
 # browser:
 #   path: /usr/bin/chromium   # optional; CHROMIUM_PATH env overrides this
 
-embedder:
-  model: nomic-embed-text
+# Semantic search (ADR-019): pages are embedded locally with bge-m3 via
+# llama.cpp in a helper process; nothing leaves the machine. On by default,
+# using the files installed with spacemosquito (Homebrew: the model cask).
+# embedder:
+#   provider: local          # or none: keyword search only
+#   model_path: ~/models/bge-m3-q8_0.gguf   # override where files are found
+#   lib_path: /opt/spacemosquito/lib
+#   helper_path: /opt/spacemosquito/spacemosquito-embedder
+#   gpu_layers: 0            # CPU only (default: GPU/Metal on Apple Silicon)
+#   threads: 4               # CPU threads (default: llama.cpp's choice)
 
 mcp:
   port: 56403

@@ -2,7 +2,7 @@
 
 [![SpaceMosquito](firefox-extension/assets/icon.svg)](https://github.com/infomosquitos/SpaceMosquito)
 
-Confluence space scraper, indexer, and search engine. Uses the Confluence REST API for content extraction (with headless browser fallback), stores pages locally in **SQLite + FTS5**, and exposes an MCP server plus browser extensions for session management and crawl control.
+Confluence space scraper, indexer, and search engine. Uses the Confluence REST API for content extraction (with headless browser fallback), stores pages locally in **SQLite + FTS5** with local **semantic search** (bge-m3 via llama.cpp), and exposes an MCP server plus browser extensions for session management and crawl control.
 
 All state lives under `~/.spacemosquito/` (or a portable `--data-dir`).
 
@@ -66,7 +66,9 @@ SpaceMosquito serves MCP over Streamable HTTP at `http://127.0.0.1:56403/mcp` (s
 
 ## Search
 
-Multi-word queries match **all** terms (AND). Title matches rank above body-only hits. Default: 10 results.
+Search understands **questions, not only keywords**. By default it is **hybrid**: keyword search (SQLite FTS5/BM25 — exact terms, IDs like `CCP-761`, titles; multi-word queries match **all** terms, title matches rank higher) merged with **semantic** search, which finds pages by meaning in any language ("how is the cart recalculated when prices are outdated" finds the order simulation pages even though no page contains all those words). Default: 10 results.
+
+Semantic search runs locally: `serve` splits each page into sections, embeds them with the multilingual **bge-m3** model through llama.cpp (Metal on Apple Silicon, CPU elsewhere) in a helper process, and keeps them up to date in the background as pages are crawled. The first run takes a few minutes per thousand pages (about 10 minutes for 950 pages on an M-series Mac); afterwards only changed pages are embedded. Nothing leaves your machine. Homebrew installs the model with the app; see [INSTALL](docs/INSTALL.md) for archives. `spacemosquito stats` and `GET /api/search/stats` show coverage. Choose a mode with `--mode`, REST `mode=` or the MCP `mode` field: `hybrid` (default), `keyword`, `semantic`. Results say how each page matched (`keyword`, `semantic`, `both`) and, for semantic matches, which section (`heading_path`). Turn it off with `embedder.provider: none` in `config.yaml`. See [ADR-019](docs/adr/019-semantic-search-embeddings.md).
 
 Page **content** is stored as Markdown (`content.md` on disk, `pages.content` in the DB). API-crawled pages are converted from **Confluence Storage Format** via a rule-based converter (macros, tables, code, images, draw.io, links); browser-fallback pages use generic HTML→Markdown. After upgrading, regenerate existing pages:
 
@@ -82,9 +84,11 @@ Browse the catalog by clicking **📖** next to a space in the extension's **Spa
 ./spacemosquito search "your query"
 ./spacemosquito search "your query" SPACEKEY
 ./spacemosquito search "your query" --limit 50
+./spacemosquito search "how do we import prices from SAP" --mode semantic
+./spacemosquito reindex --embeddings   # embed now instead of waiting for serve
 ```
 
-REST and MCP also accept `limit` (`GET /api/search?q=...&limit=50`, MCP `confluence_search` `limit` field).
+REST and MCP also accept `limit` and `mode` (`GET /api/search?q=...&limit=50&mode=keyword`, MCP `confluence_search` `limit` and `mode` fields).
 
 ## Get a page by Confluence ID
 
@@ -105,11 +109,11 @@ curl -s "http://localhost:56403/api/pages/42?space_key=TST"
 | `serve` | Start API + MCP server |
 | `crawl [--force] <url>` | Crawl a Confluence space (`--force` re-scrapes all pages and assets) |
 | `crawl-page <space-key> <id>` | Refresh one page (always overwrite text + assets) |
-| `search <query>` | Full-text search (`--limit N`; multi-word AND) |
+| `search <query>` | Hybrid search (`--limit N`, `--mode hybrid\|keyword\|semantic`) |
 | `get-page <id>` | Get page by Confluence ID (optional space key) |
-| `reindex` | Rebuild FTS indexes (`--content` regenerates Markdown from saved HTML) |
+| `reindex` | Rebuild FTS indexes (`--content` regenerates Markdown from saved HTML; `--embeddings [--space KEY]` updates the semantic index) |
 | `delete-space [--delete-files] <space-key>` | Remove a space from catalog, search/MCP and cron (saved files kept unless `--delete-files`); also via 🗑 in the extension's Spaces tab |
-| `stats` | Database statistics |
+| `stats` | Database statistics, semantic search coverage |
 | `version` | Print build version |
 
 Run `./spacemosquito` with no arguments for the full command list.
