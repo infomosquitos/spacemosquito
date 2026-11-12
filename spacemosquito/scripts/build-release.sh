@@ -7,10 +7,10 @@ cd "$ROOT"
 
 VERSION="${1:-dev}"
 OUT_DIR="${OUT_DIR:-$ROOT/dist}"
-LDFLAGS="-s -w -X github.com/vkh/spacemosquito/internal/cliapp.Version=${VERSION}"
-
 mkdir -p "$OUT_DIR"
 
+# One archive per platform: binaries, llama.cpp libraries, licenses
+# (scripts/package.sh). The embedding model is published separately.
 targets=(
   "darwin arm64"
   "darwin amd64"
@@ -20,13 +20,7 @@ targets=(
 
 for entry in "${targets[@]}"; do
   read -r goos goarch <<<"$entry"
-  name="spacemosquito-${goos}-${goarch}"
-  if [ "$goos" = "windows" ]; then
-    name="${name}.exe"
-  fi
-  echo "Building $name (version $VERSION)"
-  GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 \
-    go build -ldflags "$LDFLAGS" -o "$OUT_DIR/$name" ./cmd/spacemosquito
+  "$ROOT/scripts/package.sh" "$goos" "$goarch" "$VERSION" "$OUT_DIR"
 done
 
 "$REPO_ROOT/scripts/build-extension-zips.sh" "$VERSION" "$OUT_DIR"

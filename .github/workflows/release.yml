@@ -48,20 +48,27 @@ jobs:
           go-version-file: spacemosquito/go.mod
           cache-dependency-path: spacemosquito/go.sum
 
-      - name: Build binary
+      - name: Cache llama.cpp downloads
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/spacemosquito-llama
+          key: llama-${{ matrix.goos }}-${{ matrix.goarch }}-${{ hashFiles('spacemosquito/scripts/fetch-llama-libs.sh') }}
+
+      # Binaries, llama.cpp libraries and licenses in one archive (ADR-019).
+      - name: Build archive
         env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
           VERSION: ${{ github.ref_name }}
+        run: ./scripts/package.sh "${{ matrix.goos }}" "${{ matrix.goarch }}" "$VERSION" ../dist
+
+      # The helper must load the bundled llama.cpp and libffi; with a missing
+      # model it fails only after that ("load model …").
+      - name: Smoke test embedder libraries
+        if: matrix.goos == 'linux'
         run: |
-          name="spacemosquito-${GOOS}-${GOARCH}"
-          if [ "$GOOS" = "windows" ]; then
-            name="${name}.exe"
-          fi
-          CGO_ENABLED=0 go build \
-            -ldflags "-s -w -X github.com/vkh/spacemosquito/internal/cliapp.Version=${VERSION}" \
-            -o "../dist/${name}" \
-            ./cmd/spacemosquito
+          mkdir -p /tmp/pkg && tar xzf ../dist/spacemosquito-linux-amd64.tar.gz -C /tmp/pkg
+          out=$(LD_LIBRARY_PATH=/tmp/pkg/lib /tmp/pkg/spacemosquito-embedder -lib /tmp/pkg/lib -model /nonexistent.gguf -check x 2>&1 || true)
+          echo "$out"
+          echo "$out" | grep -q "load model" || { echo "llama.cpp libraries did not load"; exit 1; }
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
@@ -200,8 +207,11 @@ jobs:
         run: |
           mkdir -p homebrew-tap/Casks
           ./scripts/render-homebrew-cask.sh "$GITHUB_REF_NAME" dist/SHA256SUMS > homebrew-tap/Casks/spacemosquito.rb
+          # The app cask depends on the model cask (ADR-019); it only
+          # changes when the model does.
+          ./scripts/render-model-cask.sh > homebrew-tap/Casks/spacemosquito-bge-m3-embeddings-model.rb
           cd homebrew-tap
-          git add Casks/spacemosquito.rb
+          git add Casks/spacemosquito.rb Casks/spacemosquito-bge-m3-embeddings-model.rb
           if git diff --cached --quiet; then
             echo "Cask already up to date"
             exit 0
