@@ -57,8 +57,8 @@ session:
 	if cfg.MCP.Timeout != 3600 {
 		t.Errorf("mcp.session_timeout = %d, want 3600", cfg.MCP.Timeout)
 	}
-	if cfg.Embedder.Model != "nomic-embed-text" {
-		t.Errorf("embedder.model = %q, want nomic-embed-text", cfg.Embedder.Model)
+	if cfg.Embedder.Provider != EmbedderLocal || !cfg.Embedder.Enabled() {
+		t.Errorf("embedder.provider = %q, want %q (enabled)", cfg.Embedder.Provider, EmbedderLocal)
 	}
 }
 
@@ -147,5 +147,36 @@ func TestCronJobConfig_ParseMaxDuration(t *testing.T) {
 	_, err = bad.ParseMaxDuration()
 	if err == nil {
 		t.Fatal("expected error for invalid max_duration")
+	}
+}
+
+func TestLoad_embedder(t *testing.T) {
+	for _, tc := range []struct {
+		yaml    string
+		want    string
+		enabled bool
+		wantErr bool
+	}{
+		{yaml: "embedder:\n  model: nomic-embed-text\n", want: EmbedderLocal, enabled: true}, // pre-0.9 placeholder
+		{yaml: "embedder:\n  provider: none\n", want: EmbedderNone},
+		{yaml: "embedder:\n  provider: ollama\n", wantErr: true},
+	} {
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		if err := os.WriteFile(path, []byte(tc.yaml), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := Load(path)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("%q: expected error", tc.yaml)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%q: %v", tc.yaml, err)
+		}
+		if cfg.Embedder.Provider != tc.want || cfg.Embedder.Enabled() != tc.enabled {
+			t.Errorf("%q: provider %q enabled %v, want %q %v", tc.yaml, cfg.Embedder.Provider, cfg.Embedder.Enabled(), tc.want, tc.enabled)
+		}
 	}
 }

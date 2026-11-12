@@ -95,9 +95,6 @@ func defaultDockerlessConfig(dataDir, encryptionKey string) *config.Config {
 			Host:    "127.0.0.1",
 			Timeout: 3600,
 		},
-		Embedder: config.EmbedderConfig{
-			Model: "nomic-embed-text",
-		},
 	}
 }
 

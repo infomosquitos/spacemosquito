@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -13,7 +14,7 @@ type Config struct {
 	Storage  StorageConfig  `yaml:"storage"`
 	Session  SessionConfig  `yaml:"session"`
 	Browser  BrowserConfig  `yaml:"browser"`
-	Embedder EmbedderConfig `yaml:"embedder"`
+	Embedder EmbedderConfig `yaml:"embedder,omitempty"`
 	MCP      MCPConfig      `yaml:"mcp"`
 	Cron     CronConfig     `yaml:"cron"`
 	// UpdateCheck: tell the user when a newer release is available (asks
@@ -105,20 +106,30 @@ type BrowserConfig struct {
 	Path string `yaml:"path"` // optional; CHROMIUM_PATH env takes precedence
 }
 
+// EmbedderConfig: semantic search (ADR-019). The zero value is on, using the
+// helper, llama.cpp libraries and model installed with spacemosquito.
 type EmbedderConfig struct {
-	Model  string         `yaml:"model"`
-	OpenAI *OpenAICConfig `yaml:"openai"`
-	BGE    *BGEConfig     `yaml:"bge"`
+	// Provider: "local" (default) or "none" (keyword search only).
+	Provider string `yaml:"provider,omitempty"`
+	// ModelPath, LibPath and HelperPath override where the GGUF model, the
+	// llama.cpp libraries and spacemosquito-embedder are found.
+	ModelPath  string `yaml:"model_path,omitempty"`
+	LibPath    string `yaml:"lib_path,omitempty"`
+	HelperPath string `yaml:"helper_path,omitempty"`
+	// GPULayers: unset = all layers on Apple Silicon (Metal), none elsewhere;
+	// 0 = CPU only.
+	GPULayers *int `yaml:"gpu_layers,omitempty"`
+	// Threads for CPU inference; 0 = llama.cpp default.
+	Threads int `yaml:"threads,omitempty"`
 }
 
-type OpenAICConfig struct {
-	APIKey string `yaml:"api_key"`
-	Model  string `yaml:"model"`
-}
+const (
+	EmbedderLocal = "local"
+	EmbedderNone  = "none"
+)
 
-type BGEConfig struct {
-	ModelPath string `yaml:"model_path"`
-}
+// Enabled reports whether semantic search is on.
+func (e EmbedderConfig) Enabled() bool { return e.Provider != EmbedderNone }
 
 type MCPConfig struct {
 	Port              int    `yaml:"port"`
@@ -171,8 +182,12 @@ func Load(path string) (*Config, error) {
 	if cfg.MCP.Timeout == 0 {
 		cfg.MCP.Timeout = 3600
 	}
-	if cfg.Embedder.Model == "" {
-		cfg.Embedder.Model = "nomic-embed-text"
+	switch cfg.Embedder.Provider {
+	case "":
+		cfg.Embedder.Provider = EmbedderLocal
+	case EmbedderLocal, EmbedderNone:
+	default:
+		return nil, fmt.Errorf("embedder.provider: %q is not supported (use %q or %q)", cfg.Embedder.Provider, EmbedderLocal, EmbedderNone)
 	}
 
 	// Cron defaults

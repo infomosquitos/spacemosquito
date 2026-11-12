@@ -29,3 +29,9 @@ Detail lives in `dev/tasks/<task-id>.md` when needed (no `task-` filename prefix
 - goal: Extract confluence-markdown-exporter conversion behaviors (tests + Converter) and gap-analyze vs our CSF→Markdown rules; recommend follow-ups only.
 - done_when: CME capability inventory, ours crosswalk, severity-rated gap matrix, and ≤10 ranked implement/defer/ignore recommendations; no port in this task.
 - notes: Detail in [`tasks/cme-markdown-gap-analysis.md`](tasks/cme-markdown-gap-analysis.md).
+
+## semantic-search
+- status: in_progress
+- goal: Semantic + hybrid search with bge-m3 embedded via llama.cpp (yzma helper process), shipped pre-packaged; issue #9.
+- done_when: Fresh brew install backfills embeddings and hybrid search finds paraphrased questions; `provider: none` = v0.8.10 behavior; MCP/REST `mode`; released as v0.9.0.
+- notes: Detail in [`tasks/semantic-search.md`](tasks/semantic-search.md); decision [ADR-019](../docs/adr/019-semantic-search-embeddings.md).

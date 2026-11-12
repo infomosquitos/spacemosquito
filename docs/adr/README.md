@@ -35,3 +35,4 @@ Prefer a **task doc** (`dev/tasks/…`) for short-lived design while building a 
 | 016 | SQLite-only distribution | Accepted |
 | 017 | MCP transport — Streamable HTTP | Accepted |
 | 018 | Browse pages rendered on request from content.md | Accepted |
+| 019 | Semantic search — embedded llama.cpp + bge-m3, hybrid with BM25 | Proposed |

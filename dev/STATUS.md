@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-10-22
+Last updated: 2026-11-12
 
 ## Current focus
 
@@ -8,7 +8,7 @@ Release **v0.8.10** (crawl buttons stay enabled on long crawls, 1.5 s asset paus
 
 ## Active task
 
-_None._
+**[semantic-search](tasks/semantic-search.md)** — issue [#9](https://github.com/infomosquitos/spacemosquito/issues/9), target v0.9.0. Spike done (go: yzma + llama.cpp b12110 + bge-m3 Q8_0, helper process). Slice 1 done (helper binary, protocol, client, lookup, config). Next: slice 2 (chunker).
 
 ## Blockers
 

@@ -9,6 +9,7 @@ require (
 	github.com/go-rod/rod v0.116.2
 	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/google/uuid v1.6.0
+	github.com/hybridgroup/yzma v1.32.0
 	github.com/yuin/goldmark v1.8.6
 	go.uber.org/zap v1.28.0
 	golang.org/x/net v0.58.0
@@ -20,8 +21,10 @@ require (
 	github.com/JohannesKaufmann/dom v0.3.1 // indirect
 	github.com/andybalholm/cascadia v1.3.4 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
-	github.com/kr/pretty v0.3.0 // indirect
+	github.com/jupiterrider/ffi v0.8.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
