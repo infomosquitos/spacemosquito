@@ -62,6 +62,10 @@ func Run(args []string) int {
 		runInit(args[2:], log)
 		return 0
 	}
+	// Needs no config: the Homebrew cask runs it at install time.
+	if cmd == "model" {
+		return runModel(args[2:])
+	}
 
 	cfgPath, err := paths.ResolveConfig()
 	if err != nil {
@@ -972,6 +976,7 @@ func printUsage() {
 	fmt.Println("  search <q>     Search pages (optional: <space-key> [--limit N])")
 	fmt.Println("  get-page <id>  Get page by Confluence ID (optional: <space-key>)")
 	fmt.Println("  eval-search    Compare search modes on questions with known answer pages (YAML)")
+	fmt.Println("  model install  Download the semantic search model (--dir DIR; default <data dir>/models)")
 	fmt.Println("  reindex        Rebuild FTS indexes (--content regenerates Markdown too;")
 	fmt.Println("                 --embeddings [--space KEY] updates the semantic index now)")
 	fmt.Println("  delete-space [--delete-files] <space-key>  Remove a space from the catalog (saved files kept unless --delete-files)")

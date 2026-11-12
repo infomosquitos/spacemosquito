@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `spacemosquito model install [--dir DIR]` downloads the semantic search model (635 MB, checksum-verified; skipped when already installed). Use it for archive installs on Linux and Windows.
+
+### Fixed
+- Homebrew: `brew upgrade` to 0.9.0 stopped with "Refusing to load cask … spacemosquito-bge-m3-embeddings-model from untrusted tap". The separate model cask is gone; the `spacemosquito` cask downloads the model itself at install, once (upgrades keep it). If you trusted and installed the model cask: `brew uninstall --cask spacemosquito-bge-m3-embeddings-model` removes the model too, so follow it with `spacemosquito model install --dir "$(brew --prefix)/share/spacemosquito/models"`.
+
 ## [0.9.0] - 2026-11-12
 
 ### Added

@@ -43,9 +43,6 @@ cask "spacemosquito" do
   end
 
   depends_on :macos
-  # Semantic search model (bge-m3), installed once; app upgrades do not
-  # download it again (ADR-019).
-  depends_on cask: "infomosquitos/tap/spacemosquito-bge-m3-embeddings-model"
 
   # The archive also holds spacemosquito-embedder and lib/ (llama.cpp),
   # found next to the resolved binary.
@@ -58,9 +55,23 @@ cask "spacemosquito" do
         args:           ["-dr", "com.apple.quarantine", "{{staged_path}}"],
         writable_paths: ["{{staged_path}}"],
         must_succeed:   false
+    # Semantic search model (bge-m3, 635 MB; ADR-019): downloaded once from
+    # this project's release and sha256-checked by spacemosquito itself;
+    # upgrades find it in place. Without it search is keyword-only.
+    unless_path_exists "{{HOMEBREW_PREFIX}}/share/spacemosquito/models/bge-m3-q8_0.gguf" do
+      run "{{staged_path}}/spacemosquito",
+          args:           ["model", "install", "--dir", "{{HOMEBREW_PREFIX}}/share/spacemosquito/models"],
+          writable_paths: ["{{HOMEBREW_PREFIX}}/share/spacemosquito"],
+          network_access: true,
+          print_stdout:   true,
+          must_succeed:   false
+    end
   end
 
-  zap trash: "~/.spacemosquito"
+  zap trash: [
+    "~/.spacemosquito",
+    "#{HOMEBREW_PREFIX}/share/spacemosquito",
+  ]
 
   caveats <<~EOS
     Next steps:
@@ -93,15 +104,18 @@ cask "spacemosquito" do
        for a copy without the server: spacemosquito export-html ~/SpaceMosquito-export).
 
     6. Search understands questions, not only keywords: serve embeds your
-       pages in the background (a few minutes for ~1,000 pages) with the
-       bge-m3 model installed alongside. Set embedder.provider: none in
-       ~/.spacemosquito/config.yaml for keyword search only.
+       pages in the background (about 10 minutes per ~1,000 pages) with the
+       bge-m3 model downloaded at install (635 MB, once). If that download
+       failed, run:
+         spacemosquito model install --dir "$(brew --prefix)/share/spacemosquito/models"
+       Set embedder.provider: none in ~/.spacemosquito/config.yaml for
+       keyword search only.
 
     7. Optional: connect AI agents via MCP at http://127.0.0.1:56403/mcp
        https://github.com/infomosquitos/spacemosquito/blob/main/docs/guides/configure-mcp.md
 
     \`brew uninstall --zap spacemosquito\` also deletes ~/.spacemosquito
-    (catalog, config and encryption key).
+    (catalog, config and encryption key) and the model.
   EOS
 end
 EOF

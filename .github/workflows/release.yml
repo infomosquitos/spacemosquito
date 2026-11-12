@@ -211,11 +211,11 @@ jobs:
         run: |
           mkdir -p homebrew-tap/Casks
           ./scripts/render-homebrew-cask.sh "$GITHUB_REF_NAME" dist/SHA256SUMS > homebrew-tap/Casks/spacemosquito.rb
-          # The app cask depends on the model cask (ADR-019); it only
-          # changes when the model does.
-          ./scripts/render-model-cask.sh > homebrew-tap/Casks/spacemosquito-bge-m3-embeddings-model.rb
           cd homebrew-tap
-          git add Casks/spacemosquito.rb Casks/spacemosquito-bge-m3-embeddings-model.rb
+          # 0.9.0 shipped the model as a separate cask; Homebrew 7 asks users
+          # to trust every tap cask, so the app cask now downloads the model.
+          git rm -q --ignore-unmatch Casks/spacemosquito-bge-m3-embeddings-model.rb
+          git add Casks/spacemosquito.rb
           if git diff --cached --quiet; then
             echo "Cask already up to date"
             exit 0

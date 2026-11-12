@@ -223,9 +223,10 @@ Migrations live in `spacemosquito/migrations/sqlite/` (also embedded in release 
 ## Deployment
 
 Release archives per platform hold `spacemosquito`, `spacemosquito-embedder`
-and `lib/` (llama.cpp). On macOS the Homebrew cask installs them and depends
-on `spacemosquito-bge-m3-embeddings-model`, which puts the model (635 MB, a
-release asset of this repository) into `$(brew --prefix)/share/spacemosquito/models`.
+and `lib/` (llama.cpp). On macOS the Homebrew cask installs them and, once,
+runs `spacemosquito model install`, which downloads the model (635 MB, a
+release asset of this repository, sha256-checked) into
+`$(brew --prefix)/share/spacemosquito/models`.
 See [INSTALL](INSTALL.md).
 
 Data directory layout:

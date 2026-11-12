@@ -38,7 +38,7 @@ jobs:
           body: |
             bge-m3 embedding model (GGUF Q8_0) for SpaceMosquito semantic search (ADR-019).
             Source: llama.cpp project's conversion of BAAI/bge-m3 (MIT license).
-            Installed by the Homebrew cask `spacemosquito-bge-m3-embeddings-model`; see docs/INSTALL.md for manual installs.
+            Downloaded by `spacemosquito model install` (the Homebrew cask runs it at install); see docs/INSTALL.md.
           files: dist/${{ steps.pins.outputs.file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

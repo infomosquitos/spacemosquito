@@ -39,10 +39,8 @@ bundled libraries load) + signed Firefox XPI + Chrome extension zip, uploads
 them + `SHA256SUMS`, and creates the GitHub Release for that tag. Then the
 `homebrew` job renders `Casks/spacemosquito.rb`
 ([`scripts/render-homebrew-cask.sh`](../scripts/render-homebrew-cask.sh)) and
-`Casks/spacemosquito-bge-m3-embeddings-model.rb`
-([`scripts/render-model-cask.sh`](../scripts/render-model-cask.sh); unchanged
-unless the model changes) and pushes them to the tap (skipped for pre-release
-tags containing `-`).
+pushes it to the tap (skipped for pre-release tags containing `-`). The cask
+runs `spacemosquito model install` at install time when the model is missing.
 
 **llama.cpp / yzma bumps (ADR-019):** the libraries are the upstream build that
 the yzma version in `go.mod` pins (`pkg/download.DefaultVersion`). Bump yzma,

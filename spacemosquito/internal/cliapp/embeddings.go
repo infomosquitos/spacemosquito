@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"go.uber.org/zap"
@@ -98,4 +99,40 @@ func runEvalSearch(cfg *config.Config, file string, k int, log *zap.Logger) erro
 	}
 	search.PrintEval(os.Stdout, scores, k, len(cases))
 	return nil
+}
+
+// runModel handles `model install [--dir DIR]`: download the semantic
+// search model (635 MB, sha256-checked) unless it is already there.
+func runModel(args []string) int {
+	if len(args) == 0 || args[0] != "install" {
+		fmt.Fprintln(os.Stderr, "usage: spacemosquito model install [--dir DIR]")
+		return 1
+	}
+	dir, _ := extractFlag(args[1:], "--dir")
+	if dir == "" {
+		dataDir, err := paths.ResolveDataDir()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+		dir = filepath.Join(dataDir, "models")
+	}
+	fmt.Printf("Semantic search model: %s\n", embed.ModelURL)
+	lastTenth := int64(-1)
+	path, downloaded, err := embed.InstallModel(context.Background(), dir, func(done, total int64) {
+		if tenth := done * 10 / total; tenth != lastTenth {
+			lastTenth = tenth
+			fmt.Printf("  %3d%%  %d / %d MB\n", tenth*10, done>>20, total>>20)
+		}
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "model install:", err)
+		return 1
+	}
+	if downloaded {
+		fmt.Printf("Installed %s (sha256 verified)\n", path)
+	} else {
+		fmt.Printf("Already installed: %s\n", path)
+	}
+	return 0
 }

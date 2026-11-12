@@ -14,13 +14,19 @@ Install SpaceMosquito from a [GitHub Release](https://github.com/infomosquitos/S
 brew install --cask infomosquitos/tap/spacemosquito
 ```
 
-This also installs `spacemosquito-bge-m3-embeddings-model` (the semantic
-search model, 635 MB) into `$(brew --prefix)/share/spacemosquito/models`. It is
-downloaded once; upgrading SpaceMosquito does not download it again.
+Homebrew 7 asks you to trust casks from third-party taps once:
+`brew trust --cask infomosquitos/tap/spacemosquito` (the error message shows the
+command).
+
+The install also downloads the semantic search model (bge-m3, 635 MB) into
+`$(brew --prefix)/share/spacemosquito/models`, once; upgrades keep it. If that
+download fails (e.g. offline), install still succeeds with keyword search, and
+you can fetch the model later:
+`spacemosquito model install --dir "$(brew --prefix)/share/spacemosquito/models"`.
 
 Upgrade with `brew upgrade --cask spacemosquito`. Uninstall with
-`brew uninstall --cask spacemosquito spacemosquito-bge-m3-embeddings-model`; add
-`--zap` to also delete `~/.spacemosquito` (catalog, config and encryption key).
+`brew uninstall --cask spacemosquito`; add `--zap` to also delete
+`~/.spacemosquito` (catalog, config and encryption key) and the model.
 
 The cask installs the CLI only — install the
 [browser extension](#browser-extension) separately. Linux and Windows: use the
@@ -32,16 +38,14 @@ archive below.
    and verify the checksum.
 2. Unpack it into a folder you keep. It holds `spacemosquito`,
    `spacemosquito-embedder` and `lib/` (llama.cpp); keep them together.
-3. For semantic search, download the model (635 MB, MIT license) from the
-   [`model-bge-m3-q8_0-v1`](https://github.com/infomosquitos/spacemosquito/releases/tag/model-bge-m3-q8_0-v1)
-   release into a `models` folder next to the binary (or `~/.spacemosquito/models`):
+3. Put `spacemosquito` on your `PATH` and download the semantic search model
+   (bge-m3, 635 MB, MIT license; sha256-checked) into a `models` folder next to
+   the binary (or the default, `~/.spacemosquito/models`):
 
    ```sh
    mkdir -p ~/opt/spacemosquito && tar xzf spacemosquito-linux-amd64.tar.gz -C ~/opt/spacemosquito
-   mkdir -p ~/opt/spacemosquito/models
-   curl -L -o ~/opt/spacemosquito/models/bge-m3-q8_0.gguf \
-     https://github.com/infomosquitos/spacemosquito/releases/download/model-bge-m3-q8_0-v1/bge-m3-q8_0.gguf
    ln -s ~/opt/spacemosquito/spacemosquito ~/.local/bin/spacemosquito
+   spacemosquito model install --dir ~/opt/spacemosquito/models
    ```
 
    Without the model, search is keyword-only. `spacemosquito stats` shows

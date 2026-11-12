@@ -19,7 +19,7 @@ Out of the box (Homebrew install, no extra setup), `serve` embeds every saved pa
 |---|--------|--------|----------|
 | 1 | Runtime | locked | llama.cpp loaded at runtime via [yzma](https://github.com/hybridgroup/yzma) (purego/ffi, no CGO), in a helper process (see spike). |
 | 2 | Model | locked | bge-m3, GGUF Q8_0 from `ggml-org/bge-m3-Q8_0-GGUF` (sha256 `aa473d51…a173`, 634,553,760 B). |
-| 3 | Shipping | locked | Pre-packaged: llama.cpp libs inside the `spacemosquito` cask archive; the model in a separate cask, `spacemosquito-bge-m3-embeddings-model`, that the main cask depends on; the model file is a release asset of this repo (`model-bge-m3-q8_0-v1`, Actions → Model release). No runtime downloads. |
+| 3 | Shipping | locked | Pre-packaged: llama.cpp libs inside the `spacemosquito` cask archive; the model file is a release asset of this repo (`model-bge-m3-q8_0-v1`, Actions → Model release), downloaded once by the cask via `spacemosquito model install` (0.9.0's separate model cask was dropped in 0.9.1: Homebrew 7 trust). No runtime downloads by serve. |
 | 4 | Default | locked | On: background backfill in `serve`; `hybrid` is the default search mode. |
 | 5 | Evaluation set | open | ~30 real questions + answer pages from the user's catalog, kept outside the repo. Needed before ADR-019 is Accepted, not before v0.9.0 code. |
 
@@ -143,7 +143,7 @@ CREATE INDEX page_chunks_model ON page_chunks(model);
   - `lib/` (plus `libffi.so.8` on Linux)
   - `THIRD_PARTY_LICENSES`
 - `scripts/fetch-llama-libs.sh` downloads the pinned upstream asset, checks its sha256 and copies the needed libs.
-- Main cask: the url points to the archive, `binary "spacemosquito"`, `depends_on cask: "spacemosquito-bge-m3-embeddings-model"`, and quarantine removal for the whole staged dir.
+- Main cask: the url points to the archive, `binary "spacemosquito"`, a guarded postflight step running `spacemosquito model install`, and quarantine removal for the whole staged dir.
 - Model cask: published by the manual workflow `model-release.yml` (release tag `model-bge-m3-q8_0-v1`), with `artifact` → `#{HOMEBREW_PREFIX}/share/spacemosquito/models/bge-m3-q8_0.gguf`.
 
 ## Slices (each keeps `go test ./...` green)
