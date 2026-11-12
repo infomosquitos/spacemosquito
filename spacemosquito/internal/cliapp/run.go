@@ -775,6 +775,21 @@ func runStats(cfg *config.Config, log *zap.Logger) {
 	fmt.Printf("Total Pages: %d\n", stats.TotalPages)
 	fmt.Printf("Content Indexing: %s\n", stats.ContentLang)
 	fmt.Printf("Last Crawled: %s\n", stats.LastCrawledStr)
+	dataDir, _ := paths.ResolveDataDir()
+	sem, err := embed.Open(cfg.Embedder, dataDir, database, sugar)
+	switch {
+	case err != nil:
+		fmt.Printf("Semantic Search: unavailable (%v)\n", err)
+	case sem == nil:
+		fmt.Println("Semantic Search: off (embedder.provider: none)")
+	default:
+		r := sem.Report(context.Background(), database)
+		if r.Error != "" {
+			fmt.Printf("Semantic Search: %s, not indexed yet (%s)\n", r.Model, r.Error)
+		} else {
+			fmt.Printf("Semantic Search: %s, %d / %d pages embedded (%d chunks)\n", r.Model, r.EmbeddedPages, r.Pages, r.Chunks)
+		}
+	}
 	fmt.Println()
 }
 

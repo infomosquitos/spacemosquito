@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/vkh/spacemosquito/internal/config"
+	"github.com/vkh/spacemosquito/internal/embed"
 	"github.com/vkh/spacemosquito/internal/search"
 	"github.com/vkh/spacemosquito/internal/session"
 	"github.com/vkh/spacemosquito/internal/store"
@@ -18,6 +19,8 @@ type SearchHandler struct {
 	log   logging.Sugar
 	// Search runs keyword/semantic/hybrid search; nil = keyword only.
 	Service *search.Service
+	// Semantic reports semantic index coverage in Stats; nil = off.
+	Semantic *embed.Semantic
 }
 
 func NewSearchHandler(database store.Store, store *session.Store, cfg *config.Config, log logging.Sugar) *SearchHandler {
@@ -135,5 +138,8 @@ func (h *SearchHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, stats)
+	writeJSON(w, http.StatusOK, struct {
+		*store.PageStats
+		Semantic embed.Report `json:"semantic"`
+	}{stats, h.Semantic.Report(r.Context(), h.db)})
 }

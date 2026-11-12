@@ -127,6 +127,7 @@ func setupComponents(cfg *config.Config, log *zap.Logger) (*serverComponents, er
 		semantic.Indexer.OnChange = searchService.Invalidate
 	}
 	searchHandler.Service = searchService
+	searchHandler.Semantic = semantic
 	crawlHandler := api.NewCrawlHandler(crawlJobManager, cfg, logging.New("crawl_api", log))
 
 	mcpServer := mcp.New(database, sessionStore, cfg, logging.New("mcp", log))
