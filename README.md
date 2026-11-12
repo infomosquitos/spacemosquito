@@ -2,7 +2,7 @@
 
 [![SpaceMosquito](firefox-extension/assets/icon.svg)](https://github.com/infomosquitos/SpaceMosquito)
 
-Confluence space scraper, indexer, and search engine. Uses the Confluence REST API for content extraction (with headless browser fallback) and stores pages locally as Markdown in **SQLite**. Search is **hybrid**: keyword search (FTS5/BM25) plus **semantic search** with embeddings computed on your machine (multilingual bge-m3 via llama.cpp, Metal on Apple Silicon), so people and agents can ask questions in plain language. Exposes an MCP server for AI agents, a browse UI, and browser extensions for session management and crawl control. See [Architecture](docs/ARCHITECTURE.md).
+Confluence space scraper, indexer, and search engine. Uses the Confluence REST API for content extraction (with headless browser fallback) and stores pages locally as Markdown in **SQLite**. Search is **hybrid**: keyword search (FTS5/BM25) plus **semantic search** with embeddings computed on your machine (multilingual bge-m3 via llama.cpp, Metal on Apple Silicon), so people and agents can ask questions in plain language. **Browse** saved spaces in your web browser as readable pages, as in Confluence: page tree sidebar, images, attachments, author and dates, search bar (📖 in the extension, or `http://localhost:56403/browse/`). Exposes an MCP server for AI agents and browser extensions for session management and crawl control. See [Architecture](docs/ARCHITECTURE.md).
 
 All state lives under `~/.spacemosquito/` (or a portable `--data-dir`).
 

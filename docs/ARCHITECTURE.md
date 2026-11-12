@@ -6,8 +6,10 @@ extraction (with headless browser fallback), stores pages locally as Markdown
 in **SQLite + FTS5**, and searches them **by keyword and by meaning**: pages
 are embedded locally with the multilingual **bge-m3** model through
 **llama.cpp**, and hybrid search merges BM25 with vector similarity. It
-exposes an MCP server for LLM integration, a browse UI, and Firefox/Chrome
-extensions for session management and crawl control.
+lets people browse saved spaces as readable pages (page tree, images,
+attachments, search; rendered on request from Markdown, ADR-018), exposes an
+MCP server for LLM integration, and provides Firefox/Chrome extensions for
+session management and crawl control.
 
 Docker / PostgreSQL are not part of the runtime. See [ADR-016](adr/016-sqlite-only-distribution.md).
 Semantic search: [ADR-019](adr/019-semantic-search-embeddings.md).
