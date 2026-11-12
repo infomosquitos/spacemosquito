@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-12
+
 ### Added
 - **Semantic search**: search understands questions, not only keywords, in any language ("how is the cart recalculated when prices are outdated" finds the order simulation pages). Search is now hybrid by default — exact terms, IDs and titles still rank first, pages that match by meaning fill in — in MCP `confluence_search`, REST `/api/search`, the browse search bars and `spacemosquito search`. Choose with `mode` (`hybrid`, `keyword`, `semantic`); results say how each page matched and, for meaning matches, the section.
 - Pages are embedded locally with the multilingual bge-m3 model through llama.cpp (Metal on Apple Silicon): `serve` indexes in the background (about 10 minutes per 1,000 pages the first time, then only changed pages). Nothing leaves your machine. `spacemosquito stats` shows coverage; `reindex --embeddings` indexes in the foreground; `embedder.provider: none` turns it off.

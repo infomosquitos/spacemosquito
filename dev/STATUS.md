@@ -4,11 +4,11 @@ Last updated: 2026-11-12
 
 ## Current focus
 
-Release **v0.8.10** (crawl buttons stay enabled on long crawls, 1.5 s asset pause; v0.8.9: serve log file; v0.8.8: mentions on older pages; v0.8.7: @-mentions by name; v0.8.6: Confluence folders, throttling, faster downloads; v0.8.5: panels keep their content, block images, decision panels; v0.8.4: Jira links, reindex keeps attachment links; v0.8.3: converter and browse polish; v0.8.2: update notice; v0.8.1: attachments, Confluence authorship, wide tables, ADF decisions).
+Release **v0.9.0** (semantic search: hybrid keyword + bge-m3 embeddings via llama.cpp, release archives, model cask; v0.8.10: crawl buttons stay enabled on long crawls, 1.5 s asset pause; v0.8.9: serve log file; v0.8.8: mentions on older pages; v0.8.7: @-mentions by name; v0.8.6: Confluence folders, throttling, faster downloads; v0.8.5: panels keep their content, block images, decision panels; v0.8.4: Jira links, reindex keeps attachment links; v0.8.3: converter and browse polish; v0.8.2: update notice; v0.8.1: attachments, Confluence authorship, wide tables, ADF decisions).
 
 ## Active task
 
-**[semantic-search](tasks/semantic-search.md)** — issue [#9](https://github.com/infomosquitos/spacemosquito/issues/9), target v0.9.0. Slices 1–7 done and committed (helper, chunker, storage, indexer, hybrid search in MCP/REST/CLI, release archives + model cask, docs); `eval-search` tool ready. Next: evaluation on ~30 real questions (user), then ADR-019 → Accepted, pre-release tag to test CI packaging, v0.9.0.
+**[semantic-search](tasks/semantic-search.md)** — issue [#9](https://github.com/infomosquitos/spacemosquito/issues/9), target v0.9.0. Released in v0.9.0. Open: evaluation on ~30 real questions (user), RRF tuning, then ADR-019 → Accepted.
 
 ## Blockers
 
