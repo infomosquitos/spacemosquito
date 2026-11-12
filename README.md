@@ -2,13 +2,13 @@
 
 [![SpaceMosquito](firefox-extension/assets/icon.svg)](https://github.com/infomosquitos/SpaceMosquito)
 
-Confluence space scraper, indexer, and search engine. Uses the Confluence REST API for content extraction (with headless browser fallback), stores pages locally in **SQLite + FTS5** with local **semantic search** (bge-m3 via llama.cpp), and exposes an MCP server plus browser extensions for session management and crawl control.
+Confluence space scraper, indexer, and search engine. Uses the Confluence REST API for content extraction (with headless browser fallback) and stores pages locally as Markdown in **SQLite**. Search is **hybrid**: keyword search (FTS5/BM25) plus **semantic search** with embeddings computed on your machine (multilingual bge-m3 via llama.cpp, Metal on Apple Silicon), so people and agents can ask questions in plain language. Exposes an MCP server for AI agents, a browse UI, and browser extensions for session management and crawl control. See [Architecture](docs/ARCHITECTURE.md).
 
 All state lives under `~/.spacemosquito/` (or a portable `--data-dir`).
 
 ## Install
 
-- **[Install](docs/INSTALL.md)** — `brew install --cask infomosquitos/tap/spacemosquito` (macOS), or download binary + Firefox XPI / Chrome zip from GitHub Releases
+- **[Install](docs/INSTALL.md)** — `brew install --cask infomosquitos/tap/spacemosquito` (macOS; also installs the 635 MB embedding model once), or download the archive for your platform + Firefox XPI / Chrome zip from GitHub Releases
 - **[Install from source](docs/INSTALL-FROM-SOURCE.md)** — build with Go and npm
 
 **Logs:** `spacemosquito serve` logs to the terminal and to `~/.spacemosquito/logs/serve.log` (rotated at 10 MB, 3 old files kept; set `log_file` in `config.yaml`, `""` for terminal only).
@@ -62,7 +62,7 @@ Or trigger a crawl via the extension or `POST /api/crawl`.
 
 ## MCP (agents)
 
-SpaceMosquito serves MCP over Streamable HTTP at `http://127.0.0.1:56403/mcp` (same process as `serve`). Agents can search and read the local catalog — see **[Configure MCP](docs/guides/configure-mcp.md)**.
+SpaceMosquito serves MCP over Streamable HTTP at `http://127.0.0.1:56403/mcp` (same process as `serve`). Agents can search the local catalog with natural-language questions or exact terms, and read pages — see **[Configure MCP](docs/guides/configure-mcp.md)**.
 
 ## Search
 
