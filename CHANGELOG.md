@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-13
+
+### Fixed
+- A crawl that crashed (e.g. the headless browser connection dropped) stayed "running" until `serve` restarted, blocking new crawls and removal of that space. It now ends as failed.
+- One Confluence page that never finished loading in the headless browser stalled the whole crawl for hours and then crashed it. A page now fails after 60 s and the crawl goes on with the next one.
+- Extension: the ▶ (crawl) and ⏱ (cron) buttons were disabled once the session was more than an hour old. They stay enabled; ▶ renews the session from your browser's Confluence login and asks you to log in only if that has expired too. ⏹ (stop) works without a session.
+- Extension: a failed crawl no longer disappears silently. The space shows "Last crawl failed at 19 / 44: …", or how many pages failed in an otherwise finished crawl.
+
 ## [0.9.1] - 2026-11-13
 
 ### Added
