@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-11-13
+
+### Added
+- Extension Settings → Search: switch semantic search off and on without restarting `serve`. Off pauses indexing, stops the model helper (freeing its memory) and searches by keyword only; the index is kept, so on again only indexes what changed. The setting shows how many pages are indexed. `spacemosquito stats` and `search` follow it.
+
 ## [0.9.2] - 2026-11-13
 
 ### Fixed
