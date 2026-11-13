@@ -732,7 +732,12 @@ func runSearch(cfg *config.Config, query, spaceKey string, limit int, mode searc
 		}
 		if sem != nil {
 			defer sem.Close()
-			emb = sem.Embedder
+			_ = sem.LoadEnabled(context.Background(), database) // unreadable (old schema): on
+			if sem.Enabled() {
+				emb = sem.Embedder
+			} else {
+				sugar.Infow("semantic search is switched off (extension settings); keyword search only")
+			}
 		}
 	}
 	res, err := search.NewService(database, emb, sugar).Search(context.Background(),
@@ -802,10 +807,14 @@ func runStats(cfg *config.Config, log *zap.Logger) {
 	case sem == nil:
 		fmt.Println("Semantic Search: off (embedder.provider: none)")
 	default:
+		_ = sem.LoadEnabled(context.Background(), database) // unreadable (old schema): on
 		r := sem.Report(context.Background(), database)
-		if r.Error != "" {
+		switch {
+		case !r.Enabled:
+			fmt.Printf("Semantic Search: switched off in the extension settings (%d / %d pages embedded)\n", r.EmbeddedPages, r.Pages)
+		case r.Error != "":
 			fmt.Printf("Semantic Search: %s, not indexed yet (%s)\n", r.Model, r.Error)
-		} else {
+		default:
 			fmt.Printf("Semantic Search: %s, %d / %d pages embedded (%d chunks)\n", r.Model, r.EmbeddedPages, r.Pages, r.Chunks)
 		}
 	}

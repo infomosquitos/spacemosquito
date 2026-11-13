@@ -867,6 +867,13 @@ body {
   margin-bottom: 8px;
 }
 
+.settings-hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .version-text {
   font-size: 11px;
   color: var(--text-muted);

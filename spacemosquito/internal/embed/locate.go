@@ -121,7 +121,9 @@ func executableDirs() []string {
 	return dirs
 }
 
-func homebrewPrefixes() []string {
+// homebrewPrefixes lists where Homebrew may live (a variable so tests do not
+// find a model installed on the developer's machine).
+var homebrewPrefixes = func() []string {
 	var out []string
 	if p := os.Getenv("HOMEBREW_PREFIX"); p != "" {
 		out = append(out, p)

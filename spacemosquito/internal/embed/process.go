@@ -141,6 +141,13 @@ func (p *Process) Close() error {
 	return nil
 }
 
+// Stop ends the helper now; unlike Close, the next Embed starts it again.
+func (p *Process) Stop() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.stopLocked()
+}
+
 // Running reports whether the helper process is up (for status output).
 func (p *Process) Running() bool {
 	p.mu.Lock()

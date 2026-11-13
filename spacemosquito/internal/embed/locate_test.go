@@ -22,6 +22,14 @@ func touch(t *testing.T, path string) {
 	}
 }
 
+// noHomebrew hides the machine's Homebrew prefixes (a real install's model
+// would otherwise be found).
+func noHomebrew(t *testing.T) {
+	old := homebrewPrefixes
+	homebrewPrefixes = func() []string { return nil }
+	t.Cleanup(func() { homebrewPrefixes = old })
+}
+
 func libName() string {
 	switch runtime.GOOS {
 	case "darwin":
@@ -40,6 +48,7 @@ func helperName() string {
 }
 
 func TestLocateReleaseArchiveLayout(t *testing.T) {
+	noHomebrew(t)
 	root := t.TempDir()
 	bin := filepath.Join(root, "Caskroom", "spacemosquito", "0.9.0")
 	touch(t, filepath.Join(bin, helperName()))
@@ -59,6 +68,7 @@ func TestLocateReleaseArchiveLayout(t *testing.T) {
 }
 
 func TestLocateConfigOverridesAndDataDir(t *testing.T) {
+	noHomebrew(t)
 	root := t.TempDir()
 	helper := filepath.Join(root, "custom", "helper")
 	touch(t, helper)
@@ -76,6 +86,7 @@ func TestLocateConfigOverridesAndDataDir(t *testing.T) {
 }
 
 func TestLocateMissing(t *testing.T) {
+	noHomebrew(t)
 	root := t.TempDir()
 	touch(t, filepath.Join(root, helperName()))
 	_, err := locate(config.EmbedderConfig{}, filepath.Join(root, "data"), []string{root})

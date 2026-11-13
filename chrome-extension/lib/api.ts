@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Cookie, Session, SessionStatus, CrawlJob, CrawlSpace, CronSpaceConfig, DeleteSpaceResult } from './types';
+import { Cookie, Session, SessionStatus, CrawlJob, CrawlSpace, CronSpaceConfig, DeleteSpaceResult, SemanticSearchSetting } from './types';
 
 export class ApiClient {
   private baseUrl: string = 'http://localhost:56403';
@@ -109,6 +109,17 @@ export class ApiClient {
   async cancelCrawl(jobId: string): Promise<void> {
     await this.request(`/api/crawl/cancel?id=${encodeURIComponent(jobId)}`, {
       method: 'POST',
+    });
+  }
+
+  async getSemanticSearch(): Promise<SemanticSearchSetting> {
+    return this.request<SemanticSearchSetting>('/api/settings/semantic-search');
+  }
+
+  async setSemanticSearch(enabled: boolean): Promise<SemanticSearchSetting> {
+    return this.request<SemanticSearchSetting>('/api/settings/semantic-search', {
+      method: 'POST',
+      body: JSON.stringify({ enabled }),
     });
   }
 

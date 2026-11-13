@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -21,6 +22,8 @@ type SearchHandler struct {
 	Service *search.Service
 	// Semantic reports semantic index coverage in Stats; nil = off.
 	Semantic *embed.Semantic
+	// SemanticUnavailable says why Semantic is nil (config off, not installed).
+	SemanticUnavailable string
 }
 
 func NewSearchHandler(database store.Store, store *session.Store, cfg *config.Config, log logging.Sugar) *SearchHandler {
@@ -142,4 +145,46 @@ func (h *SearchHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		*store.PageStats
 		Semantic embed.Report `json:"semantic"`
 	}{stats, h.Semantic.Report(r.Context(), h.db)})
+}
+
+// semanticSetting is the semantic search switch as the extension shows it.
+type semanticSetting struct {
+	embed.Report
+	// Reason says why semantic search is not available.
+	Reason string `json:"reason,omitempty"`
+}
+
+func (h *SearchHandler) semanticSetting(r *http.Request) semanticSetting {
+	s := semanticSetting{Report: h.Semantic.Report(r.Context(), h.db)}
+	if !s.Available {
+		s.Reason = h.SemanticUnavailable
+	}
+	return s
+}
+
+// SemanticSettingGet: GET /api/settings/semantic-search.
+func (h *SearchHandler) SemanticSettingGet(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, h.semanticSetting(r))
+}
+
+// SemanticSettingUpdate: POST /api/settings/semantic-search {"enabled": bool}
+// switches semantic search without restarting serve; the choice is stored.
+func (h *SearchHandler) SemanticSettingUpdate(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Enabled *bool `json:"enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Enabled == nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": `body must be {"enabled": true|false}`})
+		return
+	}
+	if h.Semantic == nil {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "semantic search is not available: " + h.SemanticUnavailable})
+		return
+	}
+	if err := h.Semantic.SaveEnabled(r.Context(), h.db, *body.Enabled); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	h.log.Infow("semantic search switched", "enabled", *body.Enabled)
+	writeJSON(w, http.StatusOK, h.semanticSetting(r))
 }

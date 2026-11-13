@@ -154,6 +154,11 @@ func TestSearchFallsBackToKeyword(t *testing.T) {
 	for name, svc := range map[string]*Service{
 		"no embedder": NewService(db, nil, logging.Sugar{}),
 		"unavailable": NewService(db, wordEmbedder{err: fmt.Errorf("%w: down", embed.ErrUnavailable)}, logging.Sugar{}),
+		"switched off": func() *Service {
+			s := NewService(db, wordEmbedder{err: fmt.Errorf("must not embed when switched off")}, logging.Sugar{})
+			s.Enabled = func() bool { return false }
+			return s
+		}(),
 	} {
 		res, err := svc.Search(ctx, Request{Query: "receiver"})
 		if err != nil || res.Mode != ModeKeyword || len(res.Results) != 1 || res.Results[0].ConfluenceID != 4 {

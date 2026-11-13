@@ -159,7 +159,9 @@ flowchart LR
 ```
 
 - `mode`: `hybrid` (default when vectors exist), `keyword`, `semantic`; falls
-  back to `keyword` when semantic search is unavailable.
+  back to `keyword` when semantic search is unavailable or switched off
+  (extension Settings → `POST /api/settings/semantic-search`; stored in
+  `settings`, applied without a restart: indexing pauses, the helper stops).
 - Keyword: AND for multi-word queries, BM25 with 10× title weight, title
   substring fallback when FTS finds nothing.
 - Vectors of the current model live in memory (~20 MB per 1,000 pages) and
@@ -180,6 +182,8 @@ flowchart LR
 **page_embeddings** — per page: `model` and `source_hash` the chunks were built from
 
 **folders**, **users** — Confluence folders of the page tree; display names for @-mentions
+
+**settings** — runtime switches changed from the extension (`semantic_search`: `on`/`off`)
 
 Migrations live in `spacemosquito/migrations/sqlite/` (also embedded in release builds).
 

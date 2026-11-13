@@ -69,5 +69,9 @@ type Store interface {
 	ChunkText(ctx context.Context, pageID uuid.UUID, chunkIndex int) (text, headingPath string, err error)
 	GetEmbeddingStats(ctx context.Context, model string) (*EmbeddingStats, error)
 
+	// Runtime settings (e.g. semantic search on/off from the extension).
+	GetSetting(ctx context.Context, key string) (value string, ok bool, err error)
+	SetSetting(ctx context.Context, key, value string) error
+
 	Close()
 }

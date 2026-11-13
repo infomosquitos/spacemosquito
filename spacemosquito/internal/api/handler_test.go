@@ -172,6 +172,24 @@ func TestSearchHandler_validation(t *testing.T) {
 	})
 }
 
+func TestSemanticSetting_unavailable(t *testing.T) {
+	h := NewSearchHandler(nil, nil, testConfig(""), testLogger(t))
+	h.SemanticUnavailable = "turned off in config.yaml (embedder.provider: none)"
+
+	rec := httptest.NewRecorder()
+	h.SemanticSettingGet(rec, httptest.NewRequest(http.MethodGet, "/api/settings/semantic-search", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"available":false`) || !strings.Contains(rec.Body.String(), "config.yaml") {
+		t.Errorf("get: %d %s", rec.Code, rec.Body)
+	}
+	for body, want := range map[string]int{`{"enabled":false}`: http.StatusConflict, `{}`: http.StatusBadRequest, `nope`: http.StatusBadRequest} {
+		rec := httptest.NewRecorder()
+		h.SemanticSettingUpdate(rec, httptest.NewRequest(http.MethodPost, "/api/settings/semantic-search", strings.NewReader(body)))
+		if rec.Code != want {
+			t.Errorf("post %s: %d, want %d", body, rec.Code, want)
+		}
+	}
+}
+
 func TestCrawlHandler_validation(t *testing.T) {
 	mgr := scraper.NewJobManager(testConfig(""), nil, nil, nil, nil, testLogger(t))
 	h := NewCrawlHandler(mgr, testConfig(""), testLogger(t))

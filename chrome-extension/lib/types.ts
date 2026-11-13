@@ -36,6 +36,23 @@ export interface CrawlJob {
   completed_at?: string;
 }
 
+/** GET/POST /api/settings/semantic-search */
+export interface SemanticSearchSetting {
+  /** Installed and not turned off in config.yaml. */
+  available: boolean;
+  /** Switched on (this setting). */
+  enabled: boolean;
+  model?: string;
+  pages: number;
+  embedded_pages: number;
+  chunks: number;
+  helper_running: boolean;
+  indexing?: { running: boolean; done: number; total: number; last_error?: string };
+  error?: string;
+  /** Why it is not available. */
+  reason?: string;
+}
+
 export interface JobSnapshot {
   jobs: CrawlJob[];
   total: number;

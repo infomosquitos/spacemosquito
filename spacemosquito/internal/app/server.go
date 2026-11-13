@@ -114,8 +114,17 @@ func setupComponents(cfg *config.Config, log *zap.Logger) (*serverComponents, er
 	// Semantic search (ADR-019): off by config, or keyword search only when
 	// the helper, libraries or model are not installed.
 	semantic, err := openSemantic(cfg, database, log)
-	if err != nil {
+	switch {
+	case err != nil:
 		log.Warn("semantic search unavailable; keyword search only", zap.Error(err))
+		searchHandler.SemanticUnavailable = err.Error()
+	case semantic == nil:
+		searchHandler.SemanticUnavailable = "turned off in config.yaml (embedder.provider: none)"
+	default:
+		// The extension's switch, stored in the database (default on).
+		if err := semantic.LoadEnabled(context.Background(), database); err != nil {
+			log.Warn("read semantic search setting", zap.Error(err))
+		}
 	}
 	var queryEmbedder embed.Embedder // stays a nil interface when semantic search is off
 	if semantic != nil {
@@ -125,6 +134,7 @@ func setupComponents(cfg *config.Config, log *zap.Logger) (*serverComponents, er
 	searchService := search.NewService(database, queryEmbedder, logging.New("search", log))
 	if semantic != nil {
 		semantic.Indexer.OnChange = searchService.Invalidate
+		searchService.Enabled = semantic.Enabled
 	}
 	searchHandler.Service = searchService
 	searchHandler.Semantic = semantic
@@ -156,6 +166,8 @@ func setupComponents(cfg *config.Config, log *zap.Logger) (*serverComponents, er
 	mux.HandleFunc("GET /api/search", searchHandler.Search)
 	mux.HandleFunc("POST /api/search/reindex", searchHandler.Reindex)
 	mux.HandleFunc("GET /api/search/stats", searchHandler.Stats)
+	mux.HandleFunc("GET /api/settings/semantic-search", searchHandler.SemanticSettingGet)
+	mux.HandleFunc("POST /api/settings/semantic-search", searchHandler.SemanticSettingUpdate)
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		mcpServer.HandleRequest(w, r)
 	})

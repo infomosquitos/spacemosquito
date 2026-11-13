@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { ApiClient } from '../lib/api';
-import { CrawlJob, CrawlSpace, CronSpaceConfig, ExtensionSettings, SpaceInfo } from '../lib/types';
+import { CrawlJob, CrawlSpace, CronSpaceConfig, ExtensionSettings, SemanticSearchSetting, SpaceInfo } from '../lib/types';
 
 let api: ApiClient;
 let healthPollInterval: number | null = null;
@@ -207,6 +207,7 @@ async function probeBackend(): Promise<void> {
       loadPageContext(),
       loadSpaces(),
       syncRunningCrawls(),
+      loadSemanticSetting(),
     ]);
   }
 }
@@ -252,6 +253,42 @@ function activatePopupTab(tab: string) {
   document.querySelectorAll('.tab-content').forEach((c) => {
     c.classList.toggle('active', c.id === `tab-${tab}`);
   });
+  if (tab === 'settings') void loadSemanticSetting();
+}
+
+function renderSemanticSetting(s: SemanticSearchSetting | null): void {
+  const box = document.getElementById('semantic-search') as HTMLInputElement | null;
+  const hint = document.getElementById('semantic-search-hint');
+  if (!box || !hint) return;
+  if (!s) {
+    box.disabled = true;
+    hint.textContent = 'Start spacemosquito serve to change this.';
+    return;
+  }
+  box.checked = s.available && s.enabled;
+  box.disabled = !s.available;
+  const coverage = `${s.embedded_pages} / ${s.pages} pages indexed`;
+  if (!s.available) {
+    hint.textContent = `Not available: ${s.reason || 'unknown reason'}. Keyword search only.`;
+  } else if (!s.enabled) {
+    hint.textContent = `Off: keyword search only. ${coverage}; turning it on indexes only what changed.`;
+  } else if (s.indexing?.running && s.indexing.total > 0) {
+    hint.textContent = `On · indexing ${s.indexing.done} / ${s.indexing.total} pages…`;
+  } else {
+    hint.textContent = `On · ${coverage}. Finds pages by meaning, not only by words.`;
+  }
+}
+
+async function loadSemanticSetting(): Promise<void> {
+  if (!api || backendState !== 'up') {
+    renderSemanticSetting(null);
+    return;
+  }
+  try {
+    renderSemanticSetting(await api.getSemanticSearch());
+  } catch {
+    renderSemanticSetting(null);
+  }
 }
 
 async function setupTabs() {
@@ -670,6 +707,19 @@ async function stopSpaceCrawl(spaceKey: string): Promise<void> {
     alert('Backend URL saved');
   } catch (error) {
     alert('Save failed: ' + (error as Error).message);
+  }
+});
+
+(document.getElementById('semantic-search') as HTMLInputElement)?.addEventListener('change', async (e) => {
+  const box = e.target as HTMLInputElement;
+  const enabled = box.checked;
+  box.disabled = true;
+  try {
+    renderSemanticSetting(await api.setSemanticSearch(enabled));
+  } catch (error) {
+    box.checked = !enabled;
+    box.disabled = false;
+    alert('Could not change semantic search: ' + apiErrorMessage(error));
   }
 });
 

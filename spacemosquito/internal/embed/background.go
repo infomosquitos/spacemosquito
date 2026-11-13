@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/vkh/spacemosquito/pkg/logging"
@@ -35,8 +36,26 @@ type Background struct {
 	log  logging.Sugar
 	wake chan struct{}
 
-	mu     sync.Mutex
-	status Status
+	paused atomic.Bool
+
+	mu         sync.Mutex
+	status     Status
+	cancelPass context.CancelFunc
+}
+
+// SetPaused stops indexing (cancelling a running pass) or resumes it with
+// a pass soon. Run keeps going while paused but does no work.
+func (b *Background) SetPaused(paused bool) {
+	b.paused.Store(paused)
+	if !paused {
+		b.Notify()
+		return
+	}
+	b.mu.Lock()
+	if b.cancelPass != nil {
+		b.cancelPass()
+	}
+	b.mu.Unlock()
 }
 
 // NewBackground returns a runner for ix; call Run in a goroutine.
@@ -73,15 +92,31 @@ func (b *Background) Run(ctx context.Context) {
 		case <-time.After(wait):
 		}
 		wait = backgroundPoll
+		if b.paused.Load() {
+			continue
+		}
 		if err := b.pass(ctx); errors.Is(err, ErrUnavailable) {
 			wait = unavailableRetry
 		}
 	}
 }
 
-func (b *Background) pass(ctx context.Context) error {
+func (b *Background) pass(parent context.Context) error {
 	start := time.Now()
+	ctx, cancel := context.WithCancel(parent)
+	defer cancel()
 	b.setStatus(func(s *Status) { s.Running, s.Done, s.Total = true, 0, 0 })
+	b.mu.Lock()
+	b.cancelPass = cancel
+	b.mu.Unlock()
+	defer func() {
+		b.mu.Lock()
+		b.cancelPass = nil
+		b.mu.Unlock()
+	}()
+	if b.paused.Load() { // paused between the check in Run and here
+		cancel()
+	}
 	res, err := b.ix.Backfill(ctx, "", func(done, total int) {
 		b.setStatus(func(s *Status) { s.Done, s.Total = done, total })
 		if b.log.Enabled() && (done%50 == 0 || done == total) {

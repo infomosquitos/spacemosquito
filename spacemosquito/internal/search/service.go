@@ -63,6 +63,10 @@ type Service struct {
 	emb  embed.Embedder
 	vecs *vectorIndex
 	log  logging.Sugar
+
+	// Enabled, if set, switches semantic search at runtime; when it
+	// returns false every mode runs as keyword search.
+	Enabled func() bool
 }
 
 // NewService returns a Service; emb nil means keyword search only.
@@ -82,7 +86,7 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 	if mode == "" {
 		mode = ModeHybrid
 	}
-	if s.emb == nil {
+	if s.emb == nil || (s.Enabled != nil && !s.Enabled()) {
 		mode = ModeKeyword
 	}
 	if mode == ModeKeyword {
