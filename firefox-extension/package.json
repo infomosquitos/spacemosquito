@@ -13,8 +13,8 @@
     "webextension-polyfill": "^0.12.0"
   },
   "devDependencies": {
-    "@types/chrome": "^0.3.5",
-    "@types/webextension-polyfill": "^0.12.5",
+    "@types/chrome": "^0.3.7",
+    "@types/webextension-polyfill": "^0.12.6",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2"
   }
