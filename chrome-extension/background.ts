@@ -447,13 +447,23 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, sendResponse: (resp
     case 'capture-and-validate':
       return new Promise(resolve => {
         (async () => {
-          let tabUrl: string | undefined;
+          // msg.url: renew for that Confluence site (popup crawl buttons);
+          // otherwise for the active tab (session chip).
+          let tabUrl: string | undefined = msg.url;
           let cookieStoreId: string | undefined;
           try {
-            const tabs: any[] = await chrome.tabs.query({ active: true, currentWindow: true });
-            const tab = tabs[0];
-            tabUrl = tab?.url;
-            cookieStoreId = tab?.cookieStoreId;
+            if (tabUrl) {
+              const host = new URL(tabUrl).hostname;
+              const tabs: any[] = await chrome.tabs.query({});
+              cookieStoreId = tabs.find((t) => {
+                try { return new URL(t.url).hostname === host; } catch { return false; }
+              })?.cookieStoreId;
+            } else {
+              const tabs: any[] = await chrome.tabs.query({ active: true, currentWindow: true });
+              const tab = tabs[0];
+              tabUrl = tab?.url;
+              cookieStoreId = tab?.cookieStoreId;
+            }
           } catch { /* ignore */ }
           if (!tabUrl) {
             resolve({ success: false, error: 'No active tab' });

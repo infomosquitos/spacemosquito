@@ -194,7 +194,7 @@ func (m *CrawlJobManager) RunJob(ctx context.Context, jobID string) error {
 }
 
 // runJob is the testable entrypoint. If run is nil, the real CrawlRunner is used.
-func (m *CrawlJobManager) runJob(ctx context.Context, jobID string, run func(context.Context, *CrawlJob) error) error {
+func (m *CrawlJobManager) runJob(ctx context.Context, jobID string, run func(context.Context, *CrawlJob) error) (retErr error) {
 	m.mu.Lock()
 	job, exists := m.jobs[jobID]
 	if !exists {
@@ -233,6 +233,9 @@ func (m *CrawlJobManager) runJob(ctx context.Context, jobID string, run func(con
 			"space_url", job.SpaceURL)
 	}
 
+	// A panic in the crawl (e.g. from the headless browser) must still end
+	// the job: otherwise it stays "running", blocking new crawls and deletes
+	// of the space until serve restarts.
 	defer func() {
 		if r := recover(); r != nil {
 			if m.log.Enabled() {
@@ -240,6 +243,8 @@ func (m *CrawlJobManager) runJob(ctx context.Context, jobID string, run func(con
 					"job_id", jobID,
 					"panic", fmt.Sprintf("%v", r))
 			}
+			m.finishJob(job, fmt.Errorf("crawl crashed: %v", r))
+			retErr = fmt.Errorf("crawl crashed: %v", r)
 		}
 	}()
 
@@ -296,6 +301,8 @@ func (m *CrawlJobManager) finishJob(job *CrawlJob, err error) {
 	if err != nil {
 		job.Status = JobStatusFailed
 		job.Error = err.Error()
+		now := time.Now()
+		job.CompletedAt = &now
 		return
 	}
 	job.Status = JobStatusCompleted

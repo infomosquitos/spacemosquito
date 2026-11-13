@@ -3,6 +3,7 @@ package scraper
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -230,5 +231,24 @@ func TestHasActiveJob(t *testing.T) {
 		if got := m.HasActiveJob(key); got != want {
 			t.Errorf("HasActiveJob(%q) = %v, want %v", key, got, want)
 		}
+	}
+}
+
+func TestCrawlJobManager_RunJob_panicEndsJobAsFailed(t *testing.T) {
+	m := testJobManager(t)
+	job, _ := m.CreateJob("https://x.atlassian.net/wiki/spaces/TPC/overview")
+
+	err := m.runJob(context.Background(), job.ID, func(ctx context.Context, j *CrawlJob) error {
+		panic("use of closed network connection")
+	})
+	if err == nil || !strings.Contains(err.Error(), "crawl crashed") {
+		t.Fatalf("err = %v, want crawl crashed", err)
+	}
+	got, _ := m.GetJob(job.ID)
+	if got.Status != JobStatusFailed || !strings.Contains(got.Error, "closed network connection") || got.CompletedAt == nil {
+		t.Fatalf("job = %+v, want failed with the panic as error", got)
+	}
+	if m.HasActiveJob("TPC") {
+		t.Fatal("crashed crawl still counts as active: blocks new crawls of the space")
 	}
 }

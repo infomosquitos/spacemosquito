@@ -720,6 +720,12 @@ body {
   color: var(--text-muted);
 }
 
+.space-crawl-result {
+  margin: 0 10px 8px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
 .btn-icon.btn-stop {
   border-color: var(--progress-fill);
   color: var(--progress-fill);

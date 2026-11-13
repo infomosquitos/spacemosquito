@@ -798,17 +798,48 @@ func (s *Scraper) downloadCSFAssets(dir string, reqs []csf.AssetRequest) (images
 	return images, diagrams
 }
 
+// browserPageTimeout bounds one browser page load (open, load, settle, read
+// HTML). Without it a page that never settles hangs the whole crawl.
+var browserPageTimeout = 60 * time.Second
+
+// browserPageHTML opens url in a new tab, waits for it to load and settle,
+// and returns its HTML. It fails after browserPageTimeout instead of hanging,
+// returns rod errors instead of panicking, and always closes the tab.
+func (s *Scraper) browserPageHTML(url string) (html string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("browser page %s: %v", url, r)
+		}
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), browserPageTimeout)
+	defer cancel()
+	tab, err := s.browser.Context(ctx).Page(proto.TargetCreateTarget{URL: url})
+	if err != nil {
+		return "", fmt.Errorf("browser open page %s: %w", url, err)
+	}
+	// Close with the browser's own context: ctx may have expired by now.
+	defer tab.Context(s.browser.GetContext()).Close() //nolint:errcheck // best-effort tab cleanup
+	page := tab.Context(ctx)
+	if err := page.WaitLoad(); err != nil {
+		return "", fmt.Errorf("browser load page %s: %w", url, err)
+	}
+	if err := page.WaitStable(time.Second); err != nil {
+		return "", fmt.Errorf("browser wait for page %s: %w", url, err)
+	}
+	html, err = page.HTML()
+	if err != nil {
+		return "", fmt.Errorf("get html: %w", err)
+	}
+	return html, nil
+}
+
 // ScrapePage scrapes a single page using a headless browser (legacy fallback).
 func (s *Scraper) ScrapePage(pg *Page, spaceKey, spaceURL string) error {
 	baseURL := extractConfluenceBaseURL(spaceURL)
 
-	page := s.browser.MustPage(pg.URL)
-	page = page.MustWaitStable().MustWaitLoad()
-	page.Timeout(30 * time.Second)
-
-	html, err := page.HTML()
+	html, err := s.browserPageHTML(pg.URL)
 	if err != nil {
-		return fmt.Errorf("get html: %w", err)
+		return err
 	}
 
 	if isErrorPage(html) {

@@ -9,6 +9,8 @@ let currentSpaceInfo: SpaceInfo | null = null;
 let sessionValid = false;
 /** Running/pending crawl jobs keyed by space_key */
 const runningBySpace = new Map<string, CrawlJob>();
+/** Latest finished (completed/failed) crawl job per space_key, to report failures. */
+const lastEndedBySpace = new Map<string, CrawlJob>();
 
 type BackendState = 'unknown' | 'up' | 'down';
 let backendState: BackendState = 'unknown';
@@ -58,6 +60,12 @@ function isBackendDown(): boolean {
 
 function actionsAllowed(): boolean {
   return backendState === 'up' && sessionValid;
+}
+
+/** Space crawl/cron/stop controls need only the backend: a crawl renews an
+ * expired session itself (ensureSession), and stop/cron need none. */
+function spaceActionsAllowed(): boolean {
+  return backendState === 'up';
 }
 
 function isPageTitlePlaceholder(text: string | null): boolean {
@@ -144,6 +152,8 @@ function applyGating(): void {
     if (!el) continue;
     if (id === 'btn-refresh-page') {
       el.disabled = !allow || !currentSpaceInfo?.pageId;
+    } else if (id === 'btn-crawl-all') {
+      el.disabled = !spaceActionsAllowed();
     } else {
       el.disabled = !allow;
     }
@@ -152,8 +162,37 @@ function applyGating(): void {
   document.querySelectorAll<HTMLButtonElement | HTMLSelectElement | HTMLInputElement>(
     '#spaces-list .btn-icon:not(.btn-browse):not(.btn-delete), #spaces-list select, #spaces-list .space-cron-panel input[type="checkbox"]'
   ).forEach((el) => {
-    el.disabled = !allow;
+    el.disabled = !spaceActionsAllowed();
   });
+}
+
+/**
+ * Crawls need a valid Confluence session. The backend expires a captured
+ * session an hour after it was last validated, so first renew it from this
+ * browser's cookies for the space's site; only if that fails ask to log in.
+ */
+async function ensureSession(spaceUrl: string): Promise<boolean> {
+  if (sessionValid) return true;
+  setSessionDisc('checking', 'Renewing session…');
+  try {
+    const result: any = await chrome.runtime.sendMessage({ type: 'capture-and-validate', url: spaceUrl });
+    if (result?.success && result?.valid) {
+      setSessionDisc('valid', 'Session is valid');
+      return true;
+    }
+  } catch { /* reported below */ }
+  setSessionDisc('invalid', 'Session is invalid or missing');
+  alert('Your Confluence session has expired. Log in to Confluence in this browser, then try again.');
+  return false;
+}
+
+function crawlResultMessage(job: CrawlJob): string {
+  const at = job.total_pages > 0 ? ` at ${job.completed} / ${job.total_pages}` : '';
+  if (job.status === 'failed') return `Last crawl failed${at}: ${job.error || 'unknown error'}`;
+  if (job.status === 'completed' && job.failed > 0) {
+    return `Last crawl: ${job.failed} page${job.failed === 1 ? '' : 's'} failed (details in serve.log)`;
+  }
+  return '';
 }
 
 async function probeBackend(): Promise<void> {
@@ -462,8 +501,16 @@ function applyJobToRow(spaceKey: string, job: CrawlJob | null): void {
   const fill = row.querySelector('.space-progress-fill') as HTMLElement | null;
   const label = row.querySelector('.space-progress-label') as HTMLElement | null;
   const counts = row.querySelector('.space-row-counts') as HTMLElement | null;
+  const result = row.querySelector('.space-crawl-result') as HTMLElement | null;
 
   const active = job && (job.status === 'running' || job.status === 'pending');
+  const ended = active ? null : lastEndedBySpace.get(spaceKey) || null;
+  const resultText = ended ? crawlResultMessage(ended) : '';
+  if (result) {
+    result.textContent = resultText;
+    result.title = ended?.error || '';
+    result.classList.toggle('hidden', !resultText);
+  }
   if (active && job) {
     const percent = job.total_pages > 0
       ? Math.round((job.completed / job.total_pages) * 100)
@@ -513,12 +560,18 @@ async function syncRunningCrawls(): Promise<void> {
     const snapshot = await api.listCrawls();
     const prevKeys = new Set(runningBySpace.keys());
     runningBySpace.clear();
+    lastEndedBySpace.clear();
 
+    const endedAt = (j: CrawlJob) => Date.parse(j.completed_at || j.updated_at || '') || 0;
     for (const job of snapshot.jobs || []) {
-      if (job.status !== 'running' && job.status !== 'pending') continue;
       const key = spaceKeyFromUrl(job.space_url);
       if (!key) continue;
-      runningBySpace.set(key, job);
+      if (job.status === 'running' || job.status === 'pending') {
+        runningBySpace.set(key, job);
+      } else if (job.status === 'failed' || job.status === 'completed') {
+        const prev = lastEndedBySpace.get(key);
+        if (!prev || endedAt(job) > endedAt(prev)) lastEndedBySpace.set(key, job);
+      }
     }
 
     const finished = [...prevKeys].filter((k) => !runningBySpace.has(k));
@@ -920,16 +973,17 @@ async function loadSpaces() {
           <div class="space-progress-track"><div class="space-progress-fill" style="width:0%"></div></div>
           <div class="space-progress-label">Crawling…</div>
         </div>
+        <div class="space-crawl-result crawl-error hidden"></div>
         <div class="space-cron-panel hidden"></div>
         <div class="space-delete-panel hidden"></div>
       `;
       list.appendChild(row);
 
-      if (running) applyJobToRow(space.space_key, running);
+      applyJobToRow(space.space_key, running || null);
 
       row.querySelector('.btn-play')?.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (!actionsAllowed()) return;
+        if (!spaceActionsAllowed()) return;
         const btn = e.currentTarget as HTMLElement;
         if (btn.classList.contains('btn-stop') || runningBySpace.has(space.space_key)) {
           await stopSpaceCrawl(space.space_key);
@@ -940,6 +994,7 @@ async function loadSpaces() {
           alert('Space has no URL');
           return;
         }
+        if (!(await ensureSession(url))) return;
         try {
           await startSpaceCrawl(url, space.space_key);
         } catch (error) {
@@ -963,7 +1018,7 @@ async function loadSpaces() {
 
       row.querySelector('.btn-cron')?.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (!actionsAllowed()) return;
+        if (!spaceActionsAllowed()) return;
         await toggleCronPanel(row, space);
       });
     });
@@ -978,9 +1033,11 @@ async function loadSpaces() {
 }
 
 (document.getElementById('btn-crawl-all') as HTMLButtonElement)?.addEventListener('click', async () => {
-  if (!actionsAllowed()) return;
+  if (!spaceActionsAllowed()) return;
   try {
     const spaces = await api.listSpaces();
+    const first = spaces.find((s) => s.space_url && !runningBySpace.has(s.space_key));
+    if (first && !(await ensureSession(first.space_url))) return;
     for (const space of spaces) {
       if (!space.space_url) continue;
       if (runningBySpace.has(space.space_key)) continue;
