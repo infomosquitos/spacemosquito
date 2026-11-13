@@ -107,7 +107,7 @@ cask "spacemosquito" do
        pages in the background (about 10 minutes per ~1,000 pages) with the
        bge-m3 model downloaded at install (635 MB, once). If that download
        failed, run:
-         spacemosquito model install --dir "$(brew --prefix)/share/spacemosquito/models"
+         spacemosquito model install --dir "#{HOMEBREW_PREFIX}/share/spacemosquito/models"
        Set embedder.provider: none in ~/.spacemosquito/config.yaml for
        keyword search only.
 
