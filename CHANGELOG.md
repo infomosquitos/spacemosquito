@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-13
+
 ### Added
 - `spacemosquito model install [--dir DIR]` downloads the semantic search model (635 MB, checksum-verified; skipped when already installed). Use it for archive installs on Linux and Windows.
 
